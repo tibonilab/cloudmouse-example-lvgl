@@ -1,0 +1,10 @@
+// bridge.cpp - include per compatibilità Arduino IDE
+#include "lib/core/Core.cpp"
+#include "lib/core/EventBus.cpp"
+#include "lib/hardware/DisplayManager.cpp"
+#include "lib/hardware/EncoderManager.cpp"
+#include "lib/hardware/LEDManager.cpp"
+#include "lib/hardware/WebServerManager.cpp"
+#include "lib/hardware/WiFiManager.cpp"
+#include "lib/helper/NTPManager.cpp"
+#include "lib/helper/QRCodeManager.cpp"
