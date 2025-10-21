@@ -236,23 +236,24 @@
  * Validates PCB version selection and required dependency availability.
  */
 
+// Helper macros for string conversion
+#define STRINGIFY(x) #x
+#define XSTRINGIFY(x) STRINGIFY(x)
+
 // Validate PCB version selection
 #if !defined(PCB_VERSION) || (PCB_VERSION != 4 && PCB_VERSION != 5)
     #error "PCB_VERSION must be defined as either 4 or 5. Check your hardware version!"
 #endif
 
-// Validate firmware version format
-#if !defined(FIRMWARE_VERSION) || (sizeof(FIRMWARE_VERSION) <= 1)
+// Validate firmware version is defined
+#ifndef FIRMWARE_VERSION
     #error "FIRMWARE_VERSION must be defined as a valid version string"
 #endif
 
 // Configuration summary for compile-time verification
 #pragma message "CloudMouse SDK Configuration:"
-#pragma message "  PCB Version: " STRINGIFY(PCB_VERSION)
+#pragma message "  PCB Version: " XSTRINGIFY(PCB_VERSION)
 #pragma message "  Firmware: " FIRMWARE_VERSION
-#pragma message "  WiFi Required: " STRINGIFY(WIFI_REQUIRED)
-
-// Helper macro for pragma message string conversion
-#define STRINGIFY(x) #x
+#pragma message "  WiFi Required: " XSTRINGIFY(WIFI_REQUIRED)
 
 #endif // DEVICE_CONFIG_H
