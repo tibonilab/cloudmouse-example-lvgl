@@ -319,7 +319,7 @@ void DisplayManager::renderAPMode() {
     }
 
     // Clear screen
-    sprite->fillSprite(COLOR_BG);
+    sprite->fillSprite(TFT_DARKGRAY);
     
     // Header for setup context
     drawHeader("WiFi Setup Required");

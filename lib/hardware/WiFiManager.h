@@ -39,6 +39,7 @@
 #include <string>
 #include "../prefs/PreferencesManager.h"
 #include "../helper/DeviceID.h"
+#include "../config/DeviceConfig.h"
 
 class WiFiManager {
 public:

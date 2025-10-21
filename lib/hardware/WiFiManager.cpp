@@ -133,8 +133,8 @@ void WiFiManager::setupAP() {
     WiFi.mode(WIFI_AP);
 
     // Generate device-specific credentials using MAC address
-    String apSSID = DeviceID::getAPSSID();           // Format: "CloudMouse-{device_id}"
-    String apPassword = DeviceID::getAPPassword();   // MAC-based secure password
+    String apSSID = GET_AP_SSID();           // Format: "CloudMouse-{device_id}"
+    String apPassword = GET_AP_PASSWORD();   // MAC-based secure password
 
     // Create Access Point with generated credentials
     bool apStarted = WiFi.softAP(apSSID.c_str(), apPassword.c_str());
