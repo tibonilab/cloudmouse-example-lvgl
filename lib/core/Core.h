@@ -1,4 +1,17 @@
-// core/Core.h - CloudMouse Boilerplate
+/**
+ * CloudMouse SDK - Core System
+ * 
+ * The Core is the heart of the CloudMouse SDK, providing:
+ * - Dual-core task management (UI on Core 1, Logic on Core 0)
+ * - Event-driven architecture with hardware abstraction
+ * - System state management and lifecycle control
+ * - Component registration and coordination
+ * 
+ * Architecture:
+ * - Core 0: Main coordination, WiFi, event processing, system health
+ * - Core 1: UI rendering, encoder input, display updates (30Hz)
+ */
+
 #ifndef CORE_H
 #define CORE_H
 
@@ -11,48 +24,58 @@
 #include "../hardware/SimpleBuzzer.h"
 #include "../hardware/WebServerManager.h"
 
-// Forward declarations
+// Forward declarations to avoid circular dependencies
 class EncoderManager;
 class DisplayManager;
 class WiFiManager;
 
 namespace CloudMouse {
 
+/**
+ * System state machine for CloudMouse lifecycle management
+ */
 enum class SystemState {
-  BOOTING,
-  INITIALIZING,
+  BOOTING,          // Initial boot animation (3.5s)
+  INITIALIZING,     // Hardware initialization
   
-  // WiFi states
-  WIFI_CONNECTING,
-  WIFI_CONNECTED,
-  WIFI_AP_MODE,
-  WIFI_ERROR,
+  // WiFi connection states
+  WIFI_CONNECTING,  // Attempting WiFi connection
+  WIFI_CONNECTED,   // Successfully connected to WiFi
+  WIFI_AP_MODE,     // Running as Access Point for setup
+  WIFI_ERROR,       // WiFi connection failed
   
-  // Running states
-  READY,
-  RUNNING,
+  // Operational states
+  READY,            // All systems ready, waiting to start
+  RUNNING,          // Normal operation mode
   
-  // Error state
-  ERROR
+  // Error handling
+  ERROR             // System error state
 };
 
+/**
+ * Core System Controller
+ * 
+ * Singleton class that manages the entire CloudMouse system.
+ * Coordinates hardware components, manages dual-core operation,
+ * and provides event-driven communication between subsystems.
+ */
 class Core {
 public:
-  // Singleton pattern
+  // Singleton access
   static Core& instance() {
     static Core core;
     return core;
   }
 
-  // System lifecycle
-  void initialize();
-  void start();
-  void startUITask();
+  // System lifecycle management
+  void initialize();        // Initialize core systems
+  void start();            // Start normal operation
+  void startUITask();      // Launch UI task on Core 1
   
-  // Main coordination loop (runs on Core 0)
+  // Main coordination loop (runs on Core 0 at 20Hz)
   void coordinationLoop();
 
-  // Component registration
+  // Hardware component registration
   void setEncoder(EncoderManager* encoder) { this->encoder = encoder; }
   void setDisplay(DisplayManager* display) { this->display = display; }
   void setWiFi(WiFiManager* wifi) { this->wifi = wifi; }
@@ -64,52 +87,51 @@ public:
   void setState(SystemState state);
 
 private:
+  // Singleton pattern enforcement
   Core() = default;
   ~Core() = default;
   Core(const Core&) = delete;
   Core& operator=(const Core&) = delete;
 
-  // System state
+  // System state tracking
   SystemState currentState = SystemState::BOOTING;
   uint32_t stateStartTime = 0;
   
-  // WiFi config
+  // Configuration
   bool wifiRequired = true;
 
-  // Components
+  // Hardware component references
   EncoderManager* encoder = nullptr;
   DisplayManager* display = nullptr;
   WiFiManager* wifi = nullptr;
   WebServerManager* webServer = nullptr;
   LEDManager* ledManager = nullptr;
 
-  // Preferences
+  // System services
   PreferencesManager prefs;
-
-  // Task handles
   TaskHandle_t uiTaskHandle = nullptr;
 
-  // Statistics
+  // Performance monitoring
   uint32_t coordinationCycles = 0;
   uint32_t eventsProcessed = 0;
   uint32_t lastHealthCheck = 0;
 
-  // Task functions
+  // FreeRTOS task functions
   static void uiTaskFunction(void* param);
   void runUITask();
 
-  // State handlers
+  // State machine handlers
   void handleBootingState();
   void handleWiFiConnection();
 
-  // Event processing
+  // Event processing system
   void processEvents();
   void processSerialCommands();
   void handleEncoderRotation(const Event& event);
   void handleEncoderClick(const Event& event);
   void handleEncoderLongPress(const Event& event);
 
-  // System monitoring
+  // System health monitoring
   void checkHealth();
 };
 

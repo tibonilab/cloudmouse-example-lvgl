@@ -8,3 +8,4 @@
 #include "lib/hardware/WiFiManager.cpp"
 #include "lib/helper/NTPManager.cpp"
 #include "lib/helper/QRCodeManager.cpp"
+#include "lib/prefs/PreferencesManager.cpp"

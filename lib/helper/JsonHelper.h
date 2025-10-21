@@ -1,3 +1,15 @@
+/**
+ * CloudMouse SDK - JSON Helper Utilities
+ * 
+ * Provides JSON parsing and handling utilities for HTTP responses and configuration.
+ * Uses ArduinoJson library with PSRAM support for memory-efficient operations.
+ * 
+ * Features:
+ * - Safe JSON deserialization with error handling
+ * - Dynamic memory allocation with PSRAM support
+ * - HTTP response parsing utilities
+ */
+
 #ifndef JSON_HELPER_H
 #define JSON_HELPER_H
 
@@ -6,59 +18,96 @@
 
 class JsonHelper {
 public:
-  // Funzione per decodificare il payload JSON della risposta HTTP
-  static DynamicJsonDocument decodeResponse(const String& payload) {
-    // Alloca memoria per il documento JSON (usa PSRAM se disponibile)
-    const size_t capacity = JSON_OBJECT_SIZE(20) + payload.length() + 1000; // allocazione dinamica
-    
-    DynamicJsonDocument doc(capacity);
+    /**
+     * Parse JSON string into DynamicJsonDocument
+     * 
+     * @param payload JSON string to parse
+     * @return DynamicJsonDocument containing parsed data, or empty document on error
+     */
+    static DynamicJsonDocument parseJson(const String& payload) {
+        // Calculate required capacity (object size + string data + safety margin)
+        const size_t capacity = JSON_OBJECT_SIZE(20) + payload.length() + 1000;
+        
+        // Create document with dynamic memory allocation (uses PSRAM if available)
+        DynamicJsonDocument doc(capacity);
 
-    // Deserializza il payload JSON
-    DeserializationError error = deserializeJson(doc, payload);
+        // Parse JSON payload
+        DeserializationError error = deserializeJson(doc, payload);
 
-    // Controlla se ci sono errori nella deserializzazione
-    if (error) {
-      Serial.print("❌ Errore deserializzazione JSON: ");
-      Serial.println(error.c_str());
-      return DynamicJsonDocument(0);
-    }
-
-    return doc;
-  }
-
-  static void sortJsonArray(JsonArray& arr) {
-    int size = arr.size();
-
-    // Bubble Sort: cicla e scambia gli elementi se l'ordine è sbagliato
-    for (int i = 0; i < size - 1; i++) {
-      for (int j = 0; j < size - i - 1; j++) {
-        if (arr[j]["ord"].as<int>() > arr[j + 1]["ord"].as<int>()) {
-          // Scambia i due oggetti direttamente senza creare nuovi oggetti nell'array
-          JsonObject obj1 = arr[j];
-          JsonObject obj2 = arr[j + 1];
-
-          // Swap: nome e ord tra obj1 e obj2
-          String tempName = obj1["name"].as<String>();
-          String tempUUID = obj1["uuid"].as<String>();
-          int tempOrd = obj1["ord"].as<int>();
-          bool tempCompleted = obj1["completed"].as<bool>();
-          bool tempStarted = obj1["started"].as<bool>();
-
-          obj1["name"] = obj2["name"];
-          obj1["ord"] = obj2["ord"];
-          obj1["completed"] = obj2["completed"];
-          obj1["started"] = obj2["started"];
-          obj1["uuid"] = obj2["uuid"];
-
-          obj2["name"] = tempName;
-          obj2["ord"] = tempOrd;
-          obj2["completed"] = tempCompleted;
-          obj2["started"] = tempStarted;
-          obj2["uuid"] = tempUUID;
+        // Handle parsing errors
+        if (error) {
+            Serial.printf("❌ JSON parsing error: %s\n", error.c_str());
+            return DynamicJsonDocument(0);  // Return empty document on error
         }
-      }
+
+        return doc;
     }
-  }
+
+    /**
+     * Parse HTTP response JSON payload
+     * Legacy method name for backward compatibility
+     * 
+     * @param payload HTTP response body containing JSON
+     * @return DynamicJsonDocument containing parsed data
+     */
+    static DynamicJsonDocument decodeResponse(const String& payload) {
+        return parseJson(payload);
+    }
+
+    /**
+     * Check if JSON document is valid (not empty)
+     * 
+     * @param doc JSON document to validate
+     * @return true if document contains valid data
+     */
+    static bool isValidJson(const DynamicJsonDocument& doc) {
+        return !doc.isNull() && doc.capacity() > 0;
+    }
+
+    /**
+     * Get string value from JSON with fallback
+     * 
+     * @param doc JSON document
+     * @param key Key to lookup
+     * @param defaultValue Default value if key not found
+     * @return String value or default
+     */
+    static String getString(const DynamicJsonDocument& doc, const char* key, const String& defaultValue = "") {
+        if (doc.containsKey(key)) {
+            return doc[key].as<String>();
+        }
+        return defaultValue;
+    }
+
+    /**
+     * Get integer value from JSON with fallback
+     * 
+     * @param doc JSON document
+     * @param key Key to lookup
+     * @param defaultValue Default value if key not found
+     * @return Integer value or default
+     */
+    static int getInt(const DynamicJsonDocument& doc, const char* key, int defaultValue = 0) {
+        if (doc.containsKey(key)) {
+            return doc[key].as<int>();
+        }
+        return defaultValue;
+    }
+
+    /**
+     * Get boolean value from JSON with fallback
+     * 
+     * @param doc JSON document
+     * @param key Key to lookup
+     * @param defaultValue Default value if key not found
+     * @return Boolean value or default
+     */
+    static bool getBool(const DynamicJsonDocument& doc, const char* key, bool defaultValue = false) {
+        if (doc.containsKey(key)) {
+            return doc[key].as<bool>();
+        }
+        return defaultValue;
+    }
 };
 
 #endif

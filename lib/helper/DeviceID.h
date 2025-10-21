@@ -1,3 +1,16 @@
+/**
+ * CloudMouse SDK - Device Identity Manager
+ * 
+ * Provides device identification utilities using ESP32 hardware features.
+ * Generates unique IDs, UUIDs, and Access Point credentials based on device MAC address.
+ * 
+ * Features:
+ * - Deterministic device ID generation
+ * - UUID creation (hardware-based)
+ * - Access Point SSID/password generation
+ * - Device information logging
+ */
+
 #ifndef DEVICEID_H
 #define DEVICEID_H
 
@@ -6,7 +19,7 @@
 
 class DeviceID {
 public:
-    // Ottieni l'ID univoco dell'ESP32 (ultimi 4 byte del MAC)
+    // Get unique ESP32 device ID (last 4 bytes of MAC address)
     static String getDeviceID() {
         uint64_t chipid = ESP.getEfuseMac();
         uint32_t low = (uint32_t)chipid;
@@ -17,13 +30,13 @@ public:
         return String(id);
     }
     
-    // 👇 UUID VERO basato sul MAC completo!
+    // Generate hardware-based UUID using complete MAC address
     static String getDeviceUUID() {
         uint64_t mac = ESP.getEfuseMac();
         uint8_t* macBytes = (uint8_t*)&mac;
         
-        // Formato UUID: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-        // Usiamo il MAC (6 byte = 48 bit) + chip ID per riempire i 128 bit
+        // UUID format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        // Uses MAC (6 bytes = 48 bits) + chip ID to fill 128 bits
         
         uint32_t chipID = (uint32_t)ESP.getEfuseMac();
         uint16_t chipRev = ESP.getChipRevision();
@@ -31,22 +44,22 @@ public:
         char uuid[37];
         snprintf(uuid, sizeof(uuid),
                  "%02x%02x%02x%02x-%02x%02x-4%01x%02x-%02x%02x-%02x%02x%02x%02x%04x",
-                 macBytes[5], macBytes[4], macBytes[3], macBytes[2],  // 8 char
-                 macBytes[1], macBytes[0],                             // 4 char
-                 (chipID >> 12) & 0x0F, (chipID >> 8) & 0xFF,         // 4 char (versione 4)
-                 0x80 | ((chipID >> 4) & 0x3F), chipID & 0xFF,        // 4 char (variant)
-                 macBytes[5], macBytes[4], macBytes[3],               // 6 char
-                 macBytes[2], macBytes[1], chipRev                    // 6 char
+                 macBytes[5], macBytes[4], macBytes[3], macBytes[2],  // 8 chars
+                 macBytes[1], macBytes[0],                             // 4 chars
+                 (chipID >> 12) & 0x0F, (chipID >> 8) & 0xFF,         // 4 chars (version 4)
+                 0x80 | ((chipID >> 4) & 0x3F), chipID & 0xFF,        // 4 chars (variant)
+                 macBytes[5], macBytes[4], macBytes[3],               // 6 chars
+                 macBytes[2], macBytes[1], chipRev                    // 6 chars
                 );
         
         return String(uuid);
     }
     
-    // 👇 Versione alternativa - UUID v4 Random-Style usando MAC come seed
+    // Alternative UUID v4 style using MAC as deterministic seed
     static String getDeviceUUIDv4Style() {
         uint64_t mac = ESP.getEfuseMac();
         
-        // Usa il MAC come seed per numeri pseudo-casuali deterministici
+        // Use MAC as seed for deterministic pseudo-random numbers
         uint32_t part1 = (uint32_t)(mac & 0xFFFFFFFF);
         uint32_t part2 = (uint32_t)((mac >> 32) & 0xFFFF);
         uint32_t part3 = ESP.getChipRevision() * 0x1A2B3C4D;
@@ -55,34 +68,34 @@ public:
         char uuid[37];
         snprintf(uuid, sizeof(uuid),
                  "%08x-%04x-4%03x-%04x-%08x%04x",
-                 part1,                           // 8 caratteri
-                 (uint16_t)(part2 & 0xFFFF),     // 4 caratteri
-                 (uint16_t)(part3 & 0xFFF),      // 3 caratteri (+ "4" per version)
-                 (uint16_t)(0x8000 | (part4 & 0x3FFF)),  // 4 caratteri (variant)
-                 part1 ^ part3,                   // 8 caratteri
-                 (uint16_t)(part2 ^ part4)       // 4 caratteri
+                 part1,                           // 8 characters
+                 (uint16_t)(part2 & 0xFFFF),     // 4 characters
+                 (uint16_t)(part3 & 0xFFF),      // 3 characters (+ "4" for version)
+                 (uint16_t)(0x8000 | (part4 & 0x3FFF)),  // 4 characters (variant)
+                 part1 ^ part3,                   // 8 characters
+                 (uint16_t)(part2 ^ part4)       // 4 characters
                 );
         
         return String(uuid);
     }
     
-    // Ottieni SSID per Access Point
+    // Generate Access Point SSID
     static String getAPSSID() {
         return "CloudMouse-" + getDeviceID();
     }
     
-    // Password semplice (primi 8 caratteri dell'ID)
+    // Generate simple AP password (first 8 characters of device ID)
     static String getAPPassword() {
         String id = getDeviceID();
         return id.substring(0, 8);
     }
     
-    // Password più sicura con mixing
+    // Generate secure AP password with MAC byte mixing
     static String getAPPasswordSecure() {
         uint64_t mac = ESP.getEfuseMac();
         uint8_t* macBytes = (uint8_t*)&mac;
         
-        // Crea una password mescolando i byte del MAC
+        // Create password by mixing MAC address bytes
         char pass[11];
         snprintf(pass, sizeof(pass), "%02x%02x%02x%02x%02x",
                  macBytes[0] ^ macBytes[3],
@@ -95,7 +108,7 @@ public:
         return String(pass);
     }
     
-    // Ottieni MAC address formattato
+    // Get formatted MAC address
     static String getMACAddress() {
         uint64_t mac = ESP.getEfuseMac();
         uint8_t* macBytes = (uint8_t*)&mac;
@@ -108,7 +121,7 @@ public:
         return String(macStr);
     }
     
-    // Log info del device
+    // Print comprehensive device information
     static void printDeviceInfo() {
         Serial.println("\n📱 Device Information:");
         Serial.printf("   Device ID: %s\n", getDeviceID().c_str());

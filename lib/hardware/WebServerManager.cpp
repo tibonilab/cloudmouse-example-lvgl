@@ -1,42 +1,61 @@
-// hardware/WebServerManager.cpp
+/**
+ * CloudMouse SDK - Web Server Manager Implementation
+ * 
+ * Captive portal implementation for WiFi credential collection during device setup.
+ * Provides responsive web interface with automatic network detection and modern UI.
+ */
+
 #include "./WebServerManager.h"
 #include "../prefs/PreferencesManager.h"
 
+// Static instance pointer for callback system
 WebServerManager* WebServerManager::instance = nullptr;
 
 WebServerManager::WebServerManager(WiFiManager& wifiMgr) 
     : webServer(80), wifiManager(wifiMgr) {
+    // Set static instance for callback handlers
     instance = this;
 }
 
 void WebServerManager::init() {
     Serial.println("🌐 Initializing WebServer...");
     
+    // Scan for available WiFi networks to populate selection list
     scanNetworks();
     
-    webServer.on("/", handleRoot);
-    webServer.on("/config", HTTP_POST, handleConfig);
-    webServer.onNotFound(handleNotFound);
+    // Register HTTP route handlers
+    webServer.on("/", handleRoot);                          // Main configuration page
+    webServer.on("/config", HTTP_POST, handleConfig);      // Credential submission endpoint
+    webServer.onNotFound(handleNotFound);                  // 404 handler for undefined routes
     
+    // Start HTTP server on port 80
     webServer.begin();
+    serverRunning = true;
+    
     Serial.println("✅ WebServer started on port 80");
+    Serial.println("🌐 Access configuration at: http://192.168.4.1");
 }
 
 void WebServerManager::update() {
+    // Process incoming HTTP requests (non-blocking)
+    // Should be called regularly in main loop
     webServer.handleClient();
 }
 
 void WebServerManager::stop() {
     webServer.stop();
+    serverRunning = false;
     Serial.println("🌐 WebServer stopped");
 }
 
 void WebServerManager::scanNetworks() {
     Serial.println("🔍 Scanning WiFi networks...");
     
+    // Perform WiFi network scan
     int networkCount = WiFi.scanNetworks();
     networkList = "";
     
+    // Build HTML option elements for each discovered network
     for (int i = 0; i < networkCount; i++) {
         networkList += "<option value='" + WiFi.SSID(i) + "'>";
         networkList += WiFi.SSID(i) + " (" + String(WiFi.RSSI(i)) + " dBm)";
@@ -47,14 +66,19 @@ void WebServerManager::scanNetworks() {
 }
 
 String WebServerManager::generateConfigPage() {
+    // Generate complete HTML page with embedded CSS and JavaScript
+    // Uses modern responsive design with gradient styling
+    // Includes form validation and user experience enhancements
+    
     return R"rawliteral(
 <!DOCTYPE HTML>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CloudMouse - Configura WiFi</title>
+    <title>CloudMouse - WiFi Configuration</title>
     <style>
+        /* Reset and base styles */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -65,6 +89,8 @@ String WebServerManager::generateConfigPage() {
             justify-content: center;
             padding: 20px;
         }
+        
+        /* Main container */
         .container {
             background: white;
             border-radius: 16px;
@@ -73,6 +99,8 @@ String WebServerManager::generateConfigPage() {
             max-width: 400px;
             width: 100%;
         }
+        
+        /* Logo and branding */
         .logo {
             text-align: center;
             margin-bottom: 30px;
@@ -87,6 +115,8 @@ String WebServerManager::generateConfigPage() {
             font-size: 14px;
             margin-top: 5px;
         }
+        
+        /* Form styling */
         .form-group {
             margin-bottom: 20px;
         }
@@ -108,6 +138,8 @@ String WebServerManager::generateConfigPage() {
             outline: none;
             border-color: #667eea;
         }
+        
+        /* Button styling */
         .btn-primary {
             width: 100%;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -123,6 +155,8 @@ String WebServerManager::generateConfigPage() {
         .btn-primary:hover {
             transform: translateY(-2px);
         }
+        
+        /* Info box styling */
         .info {
             background: #f8f9fa;
             border-radius: 8px;
@@ -143,14 +177,15 @@ String WebServerManager::generateConfigPage() {
     <div class="container">
         <div class="logo">
             <h1>🕐 CloudMouse</h1>
-            <p>Configurazione WiFi</p>
+            <p>WiFi Configuration</p>
         </div>
         
+        <!-- WiFi credential form -->
         <form action="/config" method="POST">
             <div class="form-group">
-                <label for="ssid">Rete WiFi:</label>
+                <label for="ssid">WiFi Network:</label>
                 <select name="ssid" id="ssid" required>
-                    <option value="">Seleziona una rete...</option>
+                    <option value="">Select a network...</option>
 )rawliteral" + networkList + R"rawliteral(
                 </select>
             </div>
@@ -158,22 +193,23 @@ String WebServerManager::generateConfigPage() {
             <div class="form-group">
                 <label for="password">Password:</label>
                 <input type="password" name="password" id="password" 
-                       placeholder="Inserisci la password WiFi" required>
+                       placeholder="Enter WiFi password" required>
             </div>
             
             <button type="submit" class="btn-primary">
-                🔗 Connetti
+                🔗 Connect
             </button>
         </form>
         
+        <!-- User guidance -->
         <div class="info">
-            <strong>💡 Suggerimento:</strong><br>
-            Dopo la connessione, il dispositivo si riavvierà automaticamente 
-            e sarà pronto per l'uso.
+            <strong>💡 Note:</strong><br>
+            After connection, the device will restart automatically 
+            and be ready for use.
         </div>
         
         <div class="qr-hint">
-            Hai scansionato il QR code dal display? 📱
+            Scanned QR code from device display? 📱
         </div>
     </div>
 </body>
@@ -181,28 +217,35 @@ String WebServerManager::generateConfigPage() {
 )rawliteral";
 }
 
-// Static handlers
+// ============================================================================
+// STATIC HTTP REQUEST HANDLERS
+// ============================================================================
+
 void WebServerManager::handleRoot() {
     if (!instance) return;
     
+    // Serve main configuration page
     instance->webServer.send(200, "text/html", instance->generateConfigPage());
 }
 
 void WebServerManager::handleConfig() {
     if (!instance) return;
     
+    // Validate form data presence
     if (instance->webServer.hasArg("ssid") && instance->webServer.hasArg("password")) {
         String ssid = instance->webServer.arg("ssid");
         String password = instance->webServer.arg("password");
         
-        // Risposta immediata all'utente
+        Serial.printf("🌐 WiFi credentials received: %s\n", ssid.c_str());
+        
+        // Generate immediate success response for user feedback
         String successPage = R"rawliteral(
 <!DOCTYPE HTML>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connessione in corso...</title>
+    <title>Connecting...</title>
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, sans-serif;
@@ -224,33 +267,37 @@ void WebServerManager::handleConfig() {
     </style>
 </head>
 <body>
-    <h2>🔗 Connessione in corso...</h2>
+    <h2>🔗 Connecting...</h2>
     <div class="spinner"></div>
-    <p>Il dispositivo si sta connettendo alla rete <strong>)rawliteral" + ssid + R"rawliteral(</strong></p>
-    <p>Questa pagina si chiuderà automaticamente.</p>
+    <p>Device is connecting to network <strong>)rawliteral" + ssid + R"rawliteral(</strong></p>
+    <p>This page will close automatically.</p>
     <script>setTimeout(() => window.close(), 5000);</script>
 </body>
 </html>
 )rawliteral";
         
+        // Send immediate response to prevent browser timeout
         instance->webServer.send(200, "text/html", successPage);
         
-        // Salva le credenziali e prova a connettersi
+        // Save credentials for future use
         instance->wifiManager.saveCredentials(ssid, password);
         
-        // Delay per permettere alla risposta di essere inviata
+        // Brief delay to ensure response is sent
         delay(1000);
         
-        // Prova la connessione
+        // Attempt WiFi connection with provided credentials
         instance->wifiManager.connect(ssid.c_str(), password.c_str());
         
     } else {
-        instance->webServer.send(400, "text/plain", "Errore: SSID o password mancanti");
+        // Handle missing form data
+        Serial.println("❌ Invalid form submission - missing SSID or password");
+        instance->webServer.send(400, "text/plain", "Error: Missing SSID or password");
     }
 }
 
 void WebServerManager::handleNotFound() {
     if (!instance) return;
     
-    instance->webServer.send(404, "text/plain", "Pagina non trovata");
+    // Handle requests to undefined routes
+    instance->webServer.send(404, "text/plain", "Page not found");
 }

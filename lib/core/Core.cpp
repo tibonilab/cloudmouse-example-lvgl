@@ -1,4 +1,10 @@
-// core/Core.cpp - CloudMouse Boilerplate
+/**
+ * CloudMouse SDK - Core System Implementation
+ * 
+ * Main system controller that orchestrates all CloudMouse components.
+ * Handles dual-core operation, event processing, and system lifecycle.
+ */
+
 #include "./Core.h"
 #include "../hardware/EncoderManager.h"
 #include "../hardware/DisplayManager.h"
@@ -6,20 +12,24 @@
 
 namespace CloudMouse {
 
+// ============================================================================
+// SYSTEM INITIALIZATION
+// ============================================================================
+
 void Core::initialize() {
   Serial.println("🚀 Core initialization starting...");
   
-  // Serial output device info
+  // Output device identification
   DeviceID::printDeviceInfo();
 
-  // Initialize event bus
+  // Initialize event communication system
   EventBus::instance().initialize();
   
-  // Start in BOOTING state
+  // Start system in booting state (shows LED animation)
   setState(SystemState::BOOTING);
   
-  Serial.println("🎬 Starting boot sequence - LED animation only");
-  Serial.println("✅ Core initialized in BOOTING state");
+  Serial.println("🎬 Boot sequence started - LED animation active");
+  Serial.println("✅ Core initialized successfully");
 }
 
 void Core::startUITask() {
@@ -28,21 +38,21 @@ void Core::startUITask() {
     return;
   }
 
-  // Create UI task on Core 1
+  // Create UI task on Core 1 for smooth 30Hz rendering
   xTaskCreatePinnedToCore(
     uiTaskFunction,
     "UI_Task",
-    8192,          // Stack size
-    this,          // Parameter
-    3,             // Priority
+    8192,          // 8KB stack
+    this,          // Pass Core instance
+    1,             // High priority for UI responsiveness
     &uiTaskHandle,
-    1              // Core 1
+    1              // Pin to Core 1
   );
 
   if (uiTaskHandle) {
-    Serial.println("✅ UI Task running on Core 1");
+    Serial.println("✅ UI Task running on Core 1 (30Hz)");
     
-    // Start LED animation task
+    // Start LED animation system
     if (ledManager) {
       ledManager->startAnimationTask();
     }
@@ -59,110 +69,123 @@ void Core::start() {
   }
 
   setState(SystemState::RUNNING);
-  Serial.println("✅ Core started - System RUNNING");
+  Serial.println("✅ System started - CloudMouse RUNNING");
 }
+
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
 
 void Core::setState(SystemState state) {
   if (currentState != state) {
-    Serial.printf("🔄 State change: %d → %d\n", (int)currentState, (int)state);
+    Serial.printf("🔄 State transition: %d → %d\n", (int)currentState, (int)state);
     currentState = state;
     stateStartTime = millis();
   }
 }
 
+// ============================================================================
+// MAIN COORDINATION LOOP (Core 0 - 20Hz)
+// ============================================================================
+
 void Core::coordinationLoop() {
-  // Handle booting state
+  // Handle boot sequence timing
   if (currentState == SystemState::BOOTING) {
     handleBootingState();
-    // Don't return - continue processing WiFi and other tasks
   }
 
-  // Handle WiFi connection in background
+  // WiFi management and state handling
   if (wifi) {
     wifi->update();
     handleWiFiConnection();
   }
 
-  // WiFi AP mode - update web server
+  // Web server updates when in AP mode
   if (wifi && wifi->getState() == WiFiManager::WiFiState::AP_MODE && webServer) {
     webServer->update();
   }
 
-  // Auto-start when ready
+  // Auto-transition to running state when ready
   if (currentState == SystemState::READY) {
     start();
   }
 
-  // Process serial commands
+  // Process user commands and system events
   processSerialCommands();
-
-  // Process events from UI task
   processEvents();
   
   coordinationCycles++;
 
-  // Health check every 5 seconds
+  // System health monitoring (every 5 seconds)
   if (millis() - lastHealthCheck > 5000) {
     checkHealth();
     lastHealthCheck = millis();
   }
 }
 
+// ============================================================================
+// BOOT SEQUENCE HANDLER
+// ============================================================================
+
 void Core::handleBootingState() {
-    if (millis() >= 3500) {
+    // Wait for 4 second boot animation to complete
+    if (millis() >= 4000) {
         setState(SystemState::INITIALIZING);
         
         #if WIFI_REQUIRED
-            Serial.println("📡 WiFi is REQUIRED - showing connecting screen");
+            Serial.println("📡 WiFi required - starting connection process");
             
             if (wifi) {
                 EventBus::instance().sendToUI(Event(EventType::DISPLAY_WIFI_CONNECTING));
-                
                 wifi->init();
             }
         #else
-            Serial.println("📡 WiFi NOT required - going to ready state");
-
+            Serial.println("📡 WiFi optional - ready for operation");
             EventBus::instance().sendToUI(Event(EventType::DISPLAY_WAKE_UP));
             setState(SystemState::READY);
         #endif
     }
 }
 
+// ============================================================================
+// WIFI CONNECTION HANDLER
+// ============================================================================
+
 void Core::handleWiFiConnection() {
   static WiFiManager::WiFiState lastWiFiState = WiFiManager::WiFiState::DISCONNECTED;
   WiFiManager::WiFiState currentWiFiState = wifi->getState();
 
-  // State changed
+  // Process WiFi state changes
   if (currentWiFiState != lastWiFiState) {
     lastWiFiState = currentWiFiState;
     
     switch (currentWiFiState) {
       case WiFiManager::WiFiState::CONNECTING:
-        Serial.println("📡 WiFi: Connecting...");
-        setState(SystemState::WIFI_CONNECTING);
-        
-        // // Show connecting screen
-        // EventBus::instance().sendToUI(Event(EventType::DISPLAY_WIFI_CONNECTING));
+        Serial.println("📡 WiFi: Attempting connection...");
+        setState(SystemState::WIFI_CONNECTING);  
+        // Visual feedback: loading state
+        if (ledManager) {
+          ledManager->setLoadingState(true);
+        }
         break;
         
       case WiFiManager::WiFiState::CONNECTED:
         {
-          Serial.println("✅ WiFi: Connected! FROM COORDINATION LOOP");
+          Serial.println("✅ WiFi: Connected successfully!");
           String ssid = wifi->getSSID();
           String ip = wifi->getLocalIP();
-          Serial.printf("   SSID: %s, IP: %s\n", ssid.c_str(), ip.c_str());
+          Serial.printf("   Network: %s, IP: %s\n", ssid.c_str(), ip.c_str());
           
-          // Flash green LED as feedback
+          // Visual feedback: green LED flash
           if (ledManager) {
+            ledManager->setLoadingState(false);
             ledManager->flashColor(0, 255, 0, 255, 500);
           }
           
-          // Exit WiFi connecting screen, show hello world
+          // Return to main interface
           Event helloEvent(EventType::ENCODER_ROTATION, 0);
           EventBus::instance().sendToUI(helloEvent);
           
-          // WiFi connected - go to READY state
           setState(SystemState::READY);
         }
         break;
@@ -170,16 +193,15 @@ void Core::handleWiFiConnection() {
       case WiFiManager::WiFiState::CREDENTIAL_NOT_FOUND:
       case WiFiManager::WiFiState::TIMEOUT:
       case WiFiManager::WiFiState::ERROR:
-        Serial.println("❌ WiFi: No credentials or connection failed - starting AP mode");
+        Serial.println("❌ WiFi: Connection failed - starting setup mode");
         
-        // Start AP mode
         if (wifi) {
           wifi->setupAP();
         }
         break;
         
       case WiFiManager::WiFiState::AP_MODE:
-        Serial.println("📱 WiFi: AP Mode active");
+        Serial.println("📱 WiFi: Access Point mode active");
         setState(SystemState::WIFI_AP_MODE);
         
         if (webServer) {
@@ -187,15 +209,15 @@ void Core::handleWiFiConnection() {
           String apIP = wifi->getAPIP();
           String apSSID = wifi->getSSID();
           
-          Serial.printf("   AP SSID: %s\n", apSSID.c_str());
-          Serial.printf("   AP IP: %s\n", apIP.c_str());
+          Serial.printf("   AP Name: %s\n", apSSID.c_str());
+          Serial.printf("   Setup URL: http://%s\n", apIP.c_str());
           
-          // Show AP mode on display with SSID and IP - QR for WiFi connection
+          // Show AP setup screen with QR code
           Event apEvent(EventType::DISPLAY_WIFI_AP_MODE);
           apEvent.setStringData((apSSID + "|" + apIP).c_str());
           EventBus::instance().sendToUI(apEvent);
           
-          // Flash blue LED
+          // Visual feedback: blue LED flash
           if (ledManager) {
             ledManager->flashColor(0, 100, 255, 255, 1000);
           }
@@ -207,24 +229,22 @@ void Core::handleWiFiConnection() {
     }
   }
   
-  // Check if a client connected to our AP
+  // Monitor for clients connecting to our AP
   if (currentWiFiState == WiFiManager::WiFiState::AP_MODE && wifi) {
     static bool clientWasConnected = false;
     bool clientIsConnected = wifi->hasAPClient();
     
-    // Client just connected!
     if (clientIsConnected && !clientWasConnected) {
-      Serial.println("📱 Client connected to AP - showing setup URL");
+      Serial.println("📱 Client connected - showing setup instructions");
       
-      String apIP = wifi->getAPIP();
-      String setupURL = "http://" + apIP + "/setup";
+      String setupURL = "http://" + wifi->getAPIP() + "/setup";
       
-      // Show setup URL with QR code
+      // Display setup URL with QR code
       Event setupEvent(EventType::DISPLAY_WIFI_SETUP_URL);
       setupEvent.setStringData(setupURL.c_str());
       EventBus::instance().sendToUI(setupEvent);
       
-      // Flash green LED
+      // Visual feedback: green LED flash
       if (ledManager) {
         ledManager->flashColor(0, 255, 0, 255, 300);
       }
@@ -234,11 +254,14 @@ void Core::handleWiFiConnection() {
   }
 }
 
+// ============================================================================
+// EVENT PROCESSING SYSTEM
+// ============================================================================
 
 void Core::processEvents() {
   Event event;
   
-  // Process all events from UI task
+  // Process all pending events from UI task
   while (EventBus::instance().receiveFromUI(event, 0)) {
     eventsProcessed++;
     
@@ -256,53 +279,57 @@ void Core::processEvents() {
         break;
         
       default:
-        // Unknown event
+        // Unhandled event type
         break;
     }
   }
 }
 
 void Core::handleEncoderRotation(const Event& event) {
-  Serial.printf("🔄 Encoder rotation: %d\n", event.value);
+  Serial.printf("🔄 Encoder rotation: %d steps\n", event.value);
   
-  // Notify LED manager
+  // Activate LED feedback
   if (ledManager) {
     ledManager->activate();
   }
   
-  // Send rotation event to display
+  // Forward to UI system
   EventBus::instance().sendToUI(event);
 }
 
 void Core::handleEncoderClick(const Event& event) {
   Serial.println("🖱️ Encoder clicked!");
   
-  // Flash LED
+  // Visual feedback: green LED flash
   if (ledManager) {
     ledManager->flashColor(0, 255, 0, 255, 200);
   }
   
-  // Buzz
+  // Audio feedback
   SimpleBuzzer::buzz();
   
-  // Send click event to display
+  // Forward to UI system
   EventBus::instance().sendToUI(event);
 }
 
 void Core::handleEncoderLongPress(const Event& event) {
-  Serial.println("⏱️ Encoder long press!");
+  Serial.println("⏱️ Encoder long press detected!");
   
-  // Different color flash
+  // Visual feedback: orange LED flash
   if (ledManager) {
     ledManager->flashColor(255, 165, 0, 255, 500);
   }
   
-  // Different buzz pattern
+  // Audio feedback: error pattern
   SimpleBuzzer::error();
   
-  // Send long press event to display
+  // Forward to UI system
   EventBus::instance().sendToUI(event);
 }
+
+// ============================================================================
+// UI TASK (Core 1 - 30Hz)
+// ============================================================================
 
 void Core::uiTaskFunction(void* param) {
   Core* core = static_cast<Core*>(param);
@@ -312,45 +339,46 @@ void Core::uiTaskFunction(void* param) {
 void Core::runUITask() {
   TickType_t lastWake = xTaskGetTickCount();
   
-  Serial.println("🎮 UI Task started");
+  Serial.println("🎮 UI Task started on Core 1");
   
   while (true) {
     // Read encoder input
     if (encoder) {
       encoder->update();
       
-      // Check for rotation
+      // Handle rotation
       int movement = encoder->getMovement();
       if (movement != 0) {
         Event rotationEvent(EventType::ENCODER_ROTATION, movement);
         EventBus::instance().sendToMain(rotationEvent);
-        Serial.printf("🔄 Encoder rotation: %d\n", movement);
       }
       
-      // Check for click
+      // Handle click
       if (encoder->getClicked()) {
         Event clickEvent(EventType::ENCODER_CLICK);
         EventBus::instance().sendToMain(clickEvent);
-        Serial.println("🖱️ Encoder clicked (from UI task)");
       }
       
-      // Check for long press
+      // Handle long press
       if (encoder->getLongPressed()) {
         Event longPressEvent(EventType::ENCODER_LONG_PRESS);
         EventBus::instance().sendToMain(longPressEvent);
-        Serial.println("⏱️ Encoder long pressed (from UI task)");
       }
     }
 
-    // Update display
+    // Update display rendering
     if (display) {
       display->update();
     }
     
-    // 30Hz update rate (33ms)
+    // Maintain 30Hz update rate (33ms intervals)
     vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(33));
   }
 }
+
+// ============================================================================
+// SYSTEM HEALTH MONITORING
+// ============================================================================
 
 void Core::checkHealth() {
   uint32_t freeHeap = ESP.getFreeHeap();
@@ -360,54 +388,58 @@ void Core::checkHealth() {
                 freeHeap, minFreeHeap, uxTaskGetNumberOfTasks(), 
                 coordinationCycles, eventsProcessed);
   
-  // Check UI task stack
+  // Monitor UI task stack usage
   if (uiTaskHandle) {
     UBaseType_t uiStack = uxTaskGetStackHighWaterMark(uiTaskHandle);
     Serial.printf("🎮 UI Task stack remaining: %d bytes\n", uiStack * sizeof(StackType_t));
   }
   
-  // Check LED task stack
+  // Monitor LED task stack usage
   if (ledManager && ledManager->getAnimationTaskHandle()) {
     UBaseType_t ledStack = uxTaskGetStackHighWaterMark(ledManager->getAnimationTaskHandle());
     Serial.printf("💡 LED Task stack remaining: %d bytes\n", ledStack * sizeof(StackType_t));
     
-    // Restart LED task if stack is critically low
+    // Auto-restart LED task if stack is critically low
     if (ledStack < 512) {
-      Serial.println("⚠️ LED Task stack critically low - restarting task");
+      Serial.println("⚠️ LED Task stack critically low - restarting");
       ledManager->restartAnimationTask();
     }
   }
   
-  // Log event bus status
+  // Log event bus performance
   EventBus::instance().logStatus();
   
-  // Low memory warning
+  // Memory warning
   if (freeHeap < 50000) {
     Serial.println("⚠️ LOW MEMORY WARNING!");
   }
 }
 
+// ============================================================================
+// SERIAL COMMAND INTERFACE
+// ============================================================================
+
 void Core::processSerialCommands() {
   static String commandBuffer = "";
   
-  // Read all available serial data
+  // Build command from serial input
   while (Serial.available() > 0) {
     char c = Serial.read();
     
     if (c == '\n' || c == '\r') {
-      // Command complete - process it
+      // Process complete command
       if (commandBuffer.length() > 0) {
         commandBuffer.trim();
         commandBuffer.toLowerCase();
         
-        Serial.printf("\n💬 Command received: '%s'\n", commandBuffer.c_str());
+        Serial.printf("\n💬 Command: '%s'\n", commandBuffer.c_str());
         
+        // Device information query
         if (commandBuffer == "get uuid") {
           String uuid = GET_DEVICE_UUID();
           String deviceId = GET_DEVICE_ID();
           String mac = DeviceID::getMACAddress();
           
-          // Output in formato JSON per parsing facile
           Serial.println("\n📱 DEVICE_INFO_START");
           Serial.println("{");
           Serial.printf("  \"uuid\": \"%s\",\n", uuid.c_str());
@@ -420,30 +452,35 @@ void Core::processSerialCommands() {
           Serial.println("}");
           Serial.println("📱 DEVICE_INFO_END\n");
           
+        // System restart
         } else if (commandBuffer == "reboot") {
-          Serial.println("🔄 Rebooting device...");
+          Serial.println("🔄 Rebooting CloudMouse...");
           Serial.flush();
           delay(500);
           ESP.restart();
           
+        // Factory reset
         } else if (commandBuffer == "hard reset") {
-          Serial.println("🗑️ Performing hard reset - clearing all preferences...");
+          Serial.println("🗑️ Factory reset - clearing all settings...");
           prefs.clearAll();
-          Serial.println("✅ Preferences cleared!");
-          Serial.println("🔄 Rebooting device...");
+          Serial.println("✅ Settings cleared!");
+          Serial.println("🔄 Rebooting...");
           Serial.flush();
           delay(500);
           ESP.restart();
           
+        // Help system
         } else if (commandBuffer == "help") {
-          Serial.println("\n📋 Available commands:");
-          Serial.println("  reboot      - Reboot the device");
-          Serial.println("  hard reset  - Clear all preferences and reboot");
-          Serial.println("  status      - Show system status");
-          Serial.println("  help        - Show this help message\n");
+          Serial.println("\n📋 CloudMouse Commands:");
+          Serial.println("  reboot      - Restart the device");
+          Serial.println("  hard reset  - Factory reset (clear all settings)");
+          Serial.println("  status      - Show system information");
+          Serial.println("  get uuid    - Get device identification");
+          Serial.println("  help        - Show this help\n");
           
+        // System status
         } else if (commandBuffer == "status") {
-          Serial.println("\n📊 System Status:");
+          Serial.println("\n📊 CloudMouse Status:");
           Serial.printf("  State: %d\n", (int)currentState);
           Serial.printf("  Uptime: %lu seconds\n", millis() / 1000);
           Serial.printf("  Free Heap: %d bytes\n", ESP.getFreeHeap());
@@ -453,9 +490,9 @@ void Core::processSerialCommands() {
           if (wifi) {
             Serial.printf("  WiFi State: %d\n", (int)wifi->getState());
             if (wifi->isConnected()) {
-              Serial.printf("  WiFi SSID: %s\n", wifi->getSSID().c_str());
-              Serial.printf("  WiFi IP: %s\n", wifi->getLocalIP().c_str());
-              Serial.printf("  WiFi RSSI: %d dBm\n", wifi->getRSSI());
+              Serial.printf("  Network: %s\n", wifi->getSSID().c_str());
+              Serial.printf("  IP Address: %s\n", wifi->getLocalIP().c_str());
+              Serial.printf("  Signal: %d dBm\n", wifi->getRSSI());
             }
           }
           Serial.println();
@@ -468,7 +505,6 @@ void Core::processSerialCommands() {
         commandBuffer = "";
       }
     } else {
-      // Add character to buffer
       commandBuffer += c;
     }
   }
