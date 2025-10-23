@@ -188,48 +188,45 @@ cloudmouse-boilerplate-platformio/
 ├── cloudmouse-boilerplate-platformio.ino  # Main sketch (Arduino IDE)
 ├── platformio.ini                         # PlatformIO configuration
 ├── src/
-│   └── main.cpp                          # PlatformIO entry (toggle comments)
+│   └── main.cpp                           # PlatformIO entry (toggle comments)
 │
 ├── lib/                                   # Core libraries
-│   ├── core/                             # Event system
-│   │   ├── Core.h / Core.cpp            # Main coordinator (Core 0)
-│   │   ├── EventBus.h / EventBus.cpp    # FreeRTOS queues
-│   │   └── Events.h                      # Event definitions
+│   ├── core/                              # Event system
+│   │   ├── Core.h / Core.cpp              # Main coordinator (Core 0)
+│   │   ├── EventBus.h / EventBus.cpp      # FreeRTOS queues
+│   │   └── Events.h                       # Event definitions
 │   │
-│   ├── hardware/                         # Hardware abstraction
-│   │   ├── DisplayManager.h/cpp          # ILI9488 display
-│   │   ├── LEDManager.h/cpp              # WS2812B LEDs
-│   │   ├── EncoderManager.h/cpp          # Rotary encoder
-│   │   ├── RotaryEncoderPCNT.h          # 🌟 Cross-platform PCNT wrapper
-│   │   ├── SimpleBuzzer.h                # Piezo buzzer
-│   │   ├── WiFiManager.h/cpp             # WiFi management
-│   │   ├── WebServerManager.h/cpp        # Web server
-│   │   └── LGFX_ILI9488.h               # Display config
+│   ├── hardware/                           # Hardware abstraction
+│   │   ├── DisplayManager.h/cpp            # ILI9488 display
+│   │   ├── LEDManager.h/cpp                # WS2812B LEDs
+│   │   ├── EncoderManager.h/cpp            # Rotary encoder
+│   │   ├── RotaryEncoderPCNT.h             # Cross-platform PCNT wrapper
+│   │   ├── SimpleBuzzer.h                  # Piezo buzzer
+│   │   └── LGFX_ILI9488.h                  # Display config
 │   │
-│   ├── helper/                           # Utilities
-│   │   ├── NTPManager.h/cpp              # Time sync
-│   │   ├── QRCodeManager.h/cpp           # QR codes
-│   │   ├── JsonHelper.h                  # JSON utils
-│   │   ├── AsyncHttpClient.h             # HTTP client
-│   │   └── DeviceID.h                    # Device ID
+│   ├── network/
+│   │   ├── WiFiManager.h/cpp               # WiFi management
+│   │   ├── WebServerManager.h/cpp          # Web server
 │   │
-│   ├── model/                            # Data models
-│   │   ├── Task.h / TaskManager.h        # Task management
-│   │   ├── ThemeManager.h                # UI themes
-│   │   └── i18n.h                        # Translations
+│   ├── utils/                              # Utilities
+│   │   ├── NTPManager.h/cpp                # Time sync
+│   │   ├── QRCodeManager.h/cpp             # QR codes
+│   │   ├── JsonHelper.h                    # JSON utils
+│   │   ├── AsyncHttpClient.h               # HTTP client
+│   │   └── DeviceID.h                      # Device ID
 │   │
-│   ├── prefs/                            # Storage
-│   │   └── PreferencesManager.h          # Preferences
+│   ├── prefs/                              # Storage
+│   │   └── PreferencesManager.h            # Preferences
 │   │
-│   └── config/                           # Configuration
-│       └── DeviceConfig.h                # Device settings
+│   └── config/                             # Configuration
+│       └── DeviceConfig.h                  # Device settings
 │
-├── assets/                               # Fonts & graphics
-│   ├── OpenSans*.h                       # Fonts
+├── assets/                                 # Fonts & graphics
+│   ├── OpenSans*.h                         # Fonts
 │   ├── LeagueSpartan_50.h
-│   └── logo.h                            # Logo
+│   └── logo.h                              # Logo
 │
-└── README.md                             # This file
+└── README.md                               # This file
 ```
 
 ## 💡 What the Boilerplate Does

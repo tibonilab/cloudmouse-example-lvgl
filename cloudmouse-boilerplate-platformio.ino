@@ -17,16 +17,16 @@
   #include "../lib/hardware/EncoderManager.h"
   #include "../lib/hardware/DisplayManager.h"
   #include "../lib/hardware/SimpleBuzzer.h"
-  #include "../lib/hardware/WiFiManager.h"
-  #include "../lib/hardware/WebServerManager.h"
+  #include "../lib/network/WiFiManager.h"
+  #include "../lib/network/WebServerManager.h"
   #include "../lib/hardware/LEDManager.h"
 #else
   #include "lib/core/Core.h"
   #include "lib/hardware/EncoderManager.h"
   #include "lib/hardware/DisplayManager.h"
   #include "lib/hardware/SimpleBuzzer.h"
-  #include "lib/hardware/WiFiManager.h"
-  #include "lib/hardware/WebServerManager.h"
+  #include "lib/network/WiFiManager.h"
+  #include "lib/network/WebServerManager.h"
   #include "lib/hardware/LEDManager.h"
 #endif
 

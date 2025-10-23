@@ -1,6 +1,6 @@
 /**
  * CloudMouse SDK - Web Server Manager Implementation
- * 
+ *
  * Captive portal implementation for WiFi credential collection during device setup.
  * Provides responsive web interface with automatic network detection and modern UI.
  */
@@ -8,69 +8,78 @@
 #include "./WebServerManager.h"
 #include "../prefs/PreferencesManager.h"
 
-// Static instance pointer for callback system
-WebServerManager* WebServerManager::instance = nullptr;
+namespace CloudMouse::Network
+{
+    // Static instance pointer for callback system
+    WebServerManager *WebServerManager::instance = nullptr;
 
-WebServerManager::WebServerManager(WiFiManager& wifiMgr) 
-    : webServer(80), wifiManager(wifiMgr) {
-    // Set static instance for callback handlers
-    instance = this;
-}
-
-void WebServerManager::init() {
-    Serial.println("🌐 Initializing WebServer...");
-    
-    // Scan for available WiFi networks to populate selection list
-    scanNetworks();
-    
-    // Register HTTP route handlers
-    webServer.on("/", handleRoot);                          // Main configuration page
-    webServer.on("/config", HTTP_POST, handleConfig);      // Credential submission endpoint
-    webServer.onNotFound(handleNotFound);                  // 404 handler for undefined routes
-    
-    // Start HTTP server on port 80
-    webServer.begin();
-    serverRunning = true;
-    
-    Serial.println("✅ WebServer started on port 80");
-    Serial.println("🌐 Access configuration at: http://192.168.4.1");
-}
-
-void WebServerManager::update() {
-    // Process incoming HTTP requests (non-blocking)
-    // Should be called regularly in main loop
-    webServer.handleClient();
-}
-
-void WebServerManager::stop() {
-    webServer.stop();
-    serverRunning = false;
-    Serial.println("🌐 WebServer stopped");
-}
-
-void WebServerManager::scanNetworks() {
-    Serial.println("🔍 Scanning WiFi networks...");
-    
-    // Perform WiFi network scan
-    int networkCount = WiFi.scanNetworks();
-    networkList = "";
-    
-    // Build HTML option elements for each discovered network
-    for (int i = 0; i < networkCount; i++) {
-        networkList += "<option value='" + WiFi.SSID(i) + "'>";
-        networkList += WiFi.SSID(i) + " (" + String(WiFi.RSSI(i)) + " dBm)";
-        networkList += "</option>";
+    WebServerManager::WebServerManager(WiFiManager &wifiMgr)
+        : webServer(80), wifiManager(wifiMgr)
+    {
+        // Set static instance for callback handlers
+        instance = this;
     }
-    
-    Serial.printf("✅ Found %d networks\n", networkCount);
-}
 
-String WebServerManager::generateConfigPage() {
-    // Generate complete HTML page with embedded CSS and JavaScript
-    // Uses modern responsive design with gradient styling
-    // Includes form validation and user experience enhancements
-    
-    return R"rawliteral(
+    void WebServerManager::init()
+    {
+        Serial.println("🌐 Initializing WebServer...");
+
+        // Scan for available WiFi networks to populate selection list
+        scanNetworks();
+
+        // Register HTTP route handlers
+        webServer.on("/", handleRoot);                    // Main configuration page
+        webServer.on("/config", HTTP_POST, handleConfig); // Credential submission endpoint
+        webServer.onNotFound(handleNotFound);             // 404 handler for undefined routes
+
+        // Start HTTP server on port 80
+        webServer.begin();
+        serverRunning = true;
+
+        Serial.println("✅ WebServer started on port 80");
+        Serial.println("🌐 Access configuration at: http://192.168.4.1");
+    }
+
+    void WebServerManager::update()
+    {
+        // Process incoming HTTP requests (non-blocking)
+        // Should be called regularly in main loop
+        webServer.handleClient();
+    }
+
+    void WebServerManager::stop()
+    {
+        webServer.stop();
+        serverRunning = false;
+        Serial.println("🌐 WebServer stopped");
+    }
+
+    void WebServerManager::scanNetworks()
+    {
+        Serial.println("🔍 Scanning WiFi networks...");
+
+        // Perform WiFi network scan
+        int networkCount = WiFi.scanNetworks();
+        networkList = "";
+
+        // Build HTML option elements for each discovered network
+        for (int i = 0; i < networkCount; i++)
+        {
+            networkList += "<option value='" + WiFi.SSID(i) + "'>";
+            networkList += WiFi.SSID(i) + " (" + String(WiFi.RSSI(i)) + " dBm)";
+            networkList += "</option>";
+        }
+
+        Serial.printf("✅ Found %d networks\n", networkCount);
+    }
+
+    String WebServerManager::generateConfigPage()
+    {
+        // Generate complete HTML page with embedded CSS and JavaScript
+        // Uses modern responsive design with gradient styling
+        // Includes form validation and user experience enhancements
+
+        return R"rawliteral(
 <!DOCTYPE HTML>
 <html lang="en">
 <head>
@@ -186,7 +195,8 @@ String WebServerManager::generateConfigPage() {
                 <label for="ssid">WiFi Network:</label>
                 <select name="ssid" id="ssid" required>
                     <option value="">Select a network...</option>
-)rawliteral" + networkList + R"rawliteral(
+)rawliteral" + networkList +
+               R"rawliteral(
                 </select>
             </div>
             
@@ -215,31 +225,36 @@ String WebServerManager::generateConfigPage() {
 </body>
 </html>
 )rawliteral";
-}
+    }
 
-// ============================================================================
-// STATIC HTTP REQUEST HANDLERS
-// ============================================================================
+    // ============================================================================
+    // STATIC HTTP REQUEST HANDLERS
+    // ============================================================================
 
-void WebServerManager::handleRoot() {
-    if (!instance) return;
-    
-    // Serve main configuration page
-    instance->webServer.send(200, "text/html", instance->generateConfigPage());
-}
+    void WebServerManager::handleRoot()
+    {
+        if (!instance)
+            return;
 
-void WebServerManager::handleConfig() {
-    if (!instance) return;
-    
-    // Validate form data presence
-    if (instance->webServer.hasArg("ssid") && instance->webServer.hasArg("password")) {
-        String ssid = instance->webServer.arg("ssid");
-        String password = instance->webServer.arg("password");
-        
-        Serial.printf("🌐 WiFi credentials received: %s\n", ssid.c_str());
-        
-        // Generate immediate success response for user feedback
-        String successPage = R"rawliteral(
+        // Serve main configuration page
+        instance->webServer.send(200, "text/html", instance->generateConfigPage());
+    }
+
+    void WebServerManager::handleConfig()
+    {
+        if (!instance)
+            return;
+
+        // Validate form data presence
+        if (instance->webServer.hasArg("ssid") && instance->webServer.hasArg("password"))
+        {
+            String ssid = instance->webServer.arg("ssid");
+            String password = instance->webServer.arg("password");
+
+            Serial.printf("🌐 WiFi credentials received: %s\n", ssid.c_str());
+
+            // Generate immediate success response for user feedback
+            String successPage = R"rawliteral(
 <!DOCTYPE HTML>
 <html>
 <head>
@@ -269,35 +284,40 @@ void WebServerManager::handleConfig() {
 <body>
     <h2>🔗 Connecting...</h2>
     <div class="spinner"></div>
-    <p>Device is connecting to network <strong>)rawliteral" + ssid + R"rawliteral(</strong></p>
+    <p>Device is connecting to network <strong>)rawliteral" +
+                                 ssid + R"rawliteral(</strong></p>
     <p>This page will close automatically.</p>
     <script>setTimeout(() => window.close(), 5000);</script>
 </body>
 </html>
 )rawliteral";
-        
-        // Send immediate response to prevent browser timeout
-        instance->webServer.send(200, "text/html", successPage);
-        
-        // Save credentials for future use
-        instance->wifiManager.saveCredentials(ssid, password);
-        
-        // Brief delay to ensure response is sent
-        delay(1000);
-        
-        // Attempt WiFi connection with provided credentials
-        instance->wifiManager.connect(ssid.c_str(), password.c_str());
-        
-    } else {
-        // Handle missing form data
-        Serial.println("❌ Invalid form submission - missing SSID or password");
-        instance->webServer.send(400, "text/plain", "Error: Missing SSID or password");
-    }
-}
 
-void WebServerManager::handleNotFound() {
-    if (!instance) return;
-    
-    // Handle requests to undefined routes
-    instance->webServer.send(404, "text/plain", "Page not found");
-}
+            // Send immediate response to prevent browser timeout
+            instance->webServer.send(200, "text/html", successPage);
+
+            // Save credentials for future use
+            instance->wifiManager.saveCredentials(ssid, password);
+
+            // Brief delay to ensure response is sent
+            delay(1000);
+
+            // Attempt WiFi connection with provided credentials
+            instance->wifiManager.connect(ssid.c_str(), password.c_str());
+        }
+        else
+        {
+            // Handle missing form data
+            Serial.println("❌ Invalid form submission - missing SSID or password");
+            instance->webServer.send(400, "text/plain", "Error: Missing SSID or password");
+        }
+    }
+
+    void WebServerManager::handleNotFound()
+    {
+        if (!instance)
+            return;
+
+        // Handle requests to undefined routes
+        instance->webServer.send(404, "text/plain", "Page not found");
+    }
+} // namespace CloudMouse::Network

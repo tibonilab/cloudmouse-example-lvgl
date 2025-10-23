@@ -17,7 +17,7 @@
 #include <time.h>
 #include <Arduino.h>
 
-namespace CloudMouse {
+namespace CloudMouse::Utils {
 
 class NTPManager {
 public:
