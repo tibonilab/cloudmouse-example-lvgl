@@ -24,7 +24,7 @@ This example is currently compatible with **Arduino IDE only**. PlatformIO suppo
 Before using this example, make sure you have:
 
 1. **CloudMouse SDK** - Base SDK with hardware abstraction layer
-   - 📖 [CloudMouse SDK Repository](https://github.com/yourusername/cloudmouse-sdk)
+   - 📖 [CloudMouse SDK Repository](https://github.com/tibonilab/cloudmouse-boilerplate)
    
 2. **LVGL Library** - Graphics library (v9.x recommended)
    - 📖 [LVGL Official Documentation](https://docs.lvgl.io/)
@@ -102,13 +102,13 @@ Or you can copy and paste the following config snippet.
 #define LV_USE_LABEL 1
 
 #endif
-```.
+```
 
 
 ### 3. Clone and Open
 
 ```bash
-git clone https://github.com/yourusername/cloudmouse-lvgl-example
+git clone https://github.com/tibonilab/cloudmouse-lvgl-example
 ```
 
 Open the `.ino` file in Arduino IDE.
@@ -176,7 +176,7 @@ This example follows the CloudMouse SDK architecture:
 - [LVGL Official Website](https://lvgl.io/)
 - [LVGL Documentation](https://docs.lvgl.io/)
 - [LVGL Examples](https://docs.lvgl.io/master/examples.html)
-- [CloudMouse SDK](https://github.com/yourusername/cloudmouse-sdk)
+- [CloudMouse SDK](https://github.com/tibonilab/cloudmouse-boilerplate)
 
 
 ## 📝 License
