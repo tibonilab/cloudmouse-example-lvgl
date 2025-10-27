@@ -31,9 +31,7 @@ Before using this example, make sure you have:
    - Install via Arduino Library Manager: `LVGL`
 
 3. **Required Hardware**
-   - CloudMouse device with ILI9488 display
-   - Rotary encoder
-   - ESP32 module
+   - CloudMouse device
 
 ## 🚀 Setup Instructions
 
@@ -41,17 +39,19 @@ Before using this example, make sure you have:
 
 Install the following libraries via Arduino Library Manager:
 - `LVGL` (v9.x)
-- `LovyanGFX`
 
 ### 2. Configure LVGL
 
-**IMPORTANT:** You need to add the `lv_conf.h` configuration file to your Arduino libraries folder, as mentioned here: (https://docs.lvgl.io/8/get-started/platforms/arduino.html#configure-lvgl)[https://docs.lvgl.io/8/get-started/platforms/arduino.html#configure-lvgl].
+**IMPORTANT:** You need to add the `lv_conf.h` configuration file to your Arduino libraries folder, as [mentioned here](https://docs.lvgl.io/8/get-started/platforms/arduino.html#configure-lvgl).
 
 **Location:**
 ```
 ~/Arduino/libraries/lv_conf.h
 ```
 
+> ℹ️ A reference configuration is available in this repository at `lib/config/lv_conf.h` for guidance.
+
+Or you can copy and paste the following config snippet.
 
 ```cpp
 #ifndef LV_CONF_H
@@ -103,8 +103,6 @@ Install the following libraries via Arduino Library Manager:
 
 #endif
 ```.
-
-> ℹ️ A reference configuration is available in this repository at `lib/config/lv_conf.h` for guidance.
 
 
 ### 3. Clone and Open
