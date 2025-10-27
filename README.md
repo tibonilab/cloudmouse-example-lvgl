@@ -147,8 +147,8 @@ This example follows the CloudMouse SDK architecture:
 
 | File | Description |
 |------|-------------|
-| `[lib/hardware/DisplayManager.cpp](https://github.com/tibonilab/cloudmouse-example-lvgl/blob/main/lib/hardware/DisplayManager.cpp)` | LVGL implementation and screen management |
-| `[lib/hardware/DisplayManager.h](https://github.com/tibonilab/cloudmouse-example-lvgl/blob/main/lib/hardware/DisplayManager.h)` | DisplayManager interface with LVGL ticker setup |
+| [lib/hardware/DisplayManager.cpp](https://github.com/tibonilab/cloudmouse-example-lvgl/blob/main/lib/hardware/DisplayManager.cpp) | LVGL implementation and screen management |
+| [lib/hardware/DisplayManager.h](https://github.com/tibonilab/cloudmouse-example-lvgl/blob/main/lib/hardware/DisplayManager.h) | DisplayManager interface with LVGL ticker setup |
 
 ## 🎯 Features Demonstrated
 
