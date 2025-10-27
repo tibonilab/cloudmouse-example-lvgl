@@ -44,15 +44,13 @@ namespace CloudMouse::Hardware
         // ========================================================================
 
         lv_display_t * disp;      
-        lv_indev_t * indev;       // ERRORE 1: Corretto (era lv_indevice_t)
+        lv_indev_t * indev;
 
-        // static lv_draw_buf_t draw_buf; // ERRORE 2: Rimosso, non necessario
         static lv_color_t *buf1;
         static lv_color_t *buf2;
 
-        // Signature callback corrette
+        // Signature callbacks
         static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
-        // ERRORE 1: Corretto tipo parametri
         static void lvgl_encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data);
 
         Ticker lvgl_ticker;
@@ -85,7 +83,7 @@ namespace CloudMouse::Hardware
         bool initialized = false;
         Screen currentScreen = Screen::HELLO_WORLD;
         int32_t encoder_diff = 0;
-        lv_indev_state_t encoder_state = LV_INDEV_STATE_RELEASED; // ERRORE 1: Corretto (era lv_indevice_state_t)
+        lv_indev_state_t encoder_state = LV_INDEV_STATE_RELEASED;
 
         // ========================================================================
         // UI COLOR SCHEME DEFINITIONS

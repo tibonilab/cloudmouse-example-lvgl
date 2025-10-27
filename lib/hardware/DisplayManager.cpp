@@ -6,10 +6,9 @@ namespace CloudMouse::Hardware
     using namespace CloudMouse;
 
     // ============================================================================
-    // LVGL: Definizioni delle variabili statiche
+    // LVGL: static variables definition for double buffer
     // ============================================================================
 
-    // ERRORE 2: Rimosso lv_draw_buf_t DisplayManager::draw_buf;
     lv_color_t *DisplayManager::buf1 = nullptr;
     lv_color_t *DisplayManager::buf2 = nullptr;
 
@@ -17,10 +16,7 @@ namespace CloudMouse::Hardware
     // CONSTRUCTOR AND DESTRUCTOR IMPLEMENTATION
     // ============================================================================
 
-    DisplayManager::DisplayManager() : disp(nullptr), indev(nullptr) 
-    {
-        // ERRORE 1: 'indev' ora è dichiarato correttamente
-    }
+    DisplayManager::DisplayManager() : disp(nullptr), indev(nullptr) { }
 
     DisplayManager::~DisplayManager()
     {
@@ -34,9 +30,7 @@ namespace CloudMouse::Hardware
             free(buf2);
             buf2 = nullptr;
         }
-        Serial.println("🖥️ Buffer LVGL deallocati");
 
-        // ERRORE 1: Corrette le funzioni di delete
         if (indev) lv_indev_delete(indev);
         if (disp) lv_display_delete(disp);
         
@@ -65,48 +59,46 @@ namespace CloudMouse::Hardware
 
         if (!buf1 || !buf2)
         {
-            Serial.println("❌ Fallita allocazione buffer LVGL in PSRAM!");
+            Serial.println("❌ LVGL in PSRAM buffer failed!");
             return;
         }
-        Serial.printf("✅ Buffer LVGL allocati in PSRAM (2x %d bytes)\n", sizeof(lv_color_t) * bufSize);
+        Serial.printf("✅ Buffer LVGL allocated in PSRAM (2x %d bytes)\n", sizeof(lv_color_t) * bufSize);
 
-        // ERRORE 2: Rimossa la chiamata a lv_draw_buf_init
 
-        // 5. Inizializza il driver del display LVGL (v9)
+        // 5. LVGL display driver init (v9)
         disp = lv_display_create(getWidth(), getHeight());
         if (disp == NULL) {
-             Serial.println("❌ Fallita creazione display LVGL!");
+             Serial.println("❌ LVGL display creation failed!");
              return;
         }
         lv_display_set_flush_cb(disp, lvgl_flush_cb);
-        lv_display_set_buffers(disp, buf1, buf2, bufSize * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL); // Passa la dimensione in bytes
+        lv_display_set_buffers(disp, buf1, buf2, bufSize * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL);
         lv_display_set_user_data(disp, this);
 
-        // 6. Inizializza il driver di input LVGL (Encoder) (v9)
-        // ERRORE 1: Corrette le funzioni 'indev'
+        // 6. LVGL input (Encoder) driver init (v9)
         indev = lv_indev_create();
         if (indev == NULL) {
-             Serial.println("❌ Fallita creazione indev LVGL!");
+             Serial.println("❌ LVGL indev init failed!");
              return;
         }
         lv_indev_set_type(indev, LV_INDEV_TYPE_ENCODER);
         lv_indev_set_read_cb(indev, lvgl_encoder_read_cb);
         lv_indev_set_user_data(indev, this);
 
-        // 7. Crea un gruppo e assegnalo all'encoder
+        // 7. Create a group and assing it to the encoder
         encoder_group = lv_group_create();
         lv_group_set_default(encoder_group);
-        lv_indev_set_group(indev, encoder_group); // ERRORE 1: Corretta
+        lv_indev_set_group(indev, encoder_group);
 
-        // 8. Crea l'interfaccia utente LVGL
-        Serial.println("🎨 Creazione UI LVGL...");
+        // 8. Create LVGL UI 
+        Serial.println("🎨 Creating UI LVGL...");
         createUi();
 
         // 9. Carica la schermata iniziale
         lv_disp_load_scr(screen_hello_world); // ERRORE 3: Corretto (era lv_display_load_scr)
 
         initialized = true;
-        Serial.printf("✅ DisplayManager con LVGL v9 inizializzato con successo\n");
+        Serial.printf("✅ DisplayManager with LVGL v9 succesfully initialized!\n");
     }
 
     void DisplayManager::update()
@@ -132,14 +124,11 @@ namespace CloudMouse::Hardware
         uint32_t w = lv_area_get_width(area);
         uint32_t h = lv_area_get_height(area);
 
-        // ERRORE 5: Cast corretto a (uint16_t *) invece di (lv_color_t *)
-        // Questo permette a LGFX di usare la sua template corretta per uint16_t.
         self->display.pushImage(area->x1, area->y1, w, h, (uint16_t *)px_map);
 
         lv_display_flush_ready(disp);
     }
 
-    // ERRORE 1: Corretta la signature della funzione
     void DisplayManager::lvgl_encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     {
         DisplayManager *self = (DisplayManager *)lv_indev_get_user_data(indev); // Corretto
@@ -165,21 +154,20 @@ namespace CloudMouse::Hardware
         {
         case EventType::DISPLAY_WAKE_UP:
             currentScreen = Screen::HELLO_WORLD;
-            lv_disp_load_scr(screen_hello_world); // ERRORE 3: Corretto
+            lv_disp_load_scr(screen_hello_world);
             break;
 
         case EventType::DISPLAY_WIFI_CONNECTING:
             currentScreen = Screen::WIFI_CONNECTING;
-            lv_disp_load_scr(screen_wifi_connecting); // ERRORE 3: Corretto
+            lv_disp_load_scr(screen_wifi_connecting);
             break;
 
         case EventType::ENCODER_ROTATION:
-            Serial.println("DISPLAY ENCODER READING ROTATION");
             Serial.println(event.value);
 
             encoder_diff += event.value; 
             if (currentScreen == Screen::HELLO_WORLD) {
-                lv_label_set_text_fmt(label_hello_status, "Rotazione: %s", event.value > 0 ? "DESTRA" : "SINISTRA");
+                lv_label_set_text_fmt(label_hello_status, "Encoder rotation: %s", event.value > 0 ? "RIGHT" : "LEFT");
             }
             break;
 
@@ -206,20 +194,17 @@ namespace CloudMouse::Hardware
                 
                 lv_label_set_text(label_ap_mode_ssid, apSSID.c_str());
                 lv_label_set_text(label_ap_mode_pass, apPassword.c_str());
-                // ERRORE 4: Rimosso l'argomento 'length'
                 lv_qrcode_set_data(qr_ap_mode, qrData.c_str());
             }
-            lv_disp_load_scr(screen_ap_mode); // ERRORE 3: Corretto
+            lv_disp_load_scr(screen_ap_mode);
             break;
 
         case EventType::DISPLAY_WIFI_SETUP_URL:
             currentScreen = Screen::WIFI_AP_CONNECTED;
             
-            // ERRORE 4: Rimosso l'argomento 'length'
             lv_qrcode_set_data(qr_ap_connected, WIFI_CONFIG_SERVICE);
             lv_label_set_text(label_ap_connected_url, WIFI_CONFIG_SERVICE);
-
-            lv_disp_load_scr(screen_ap_connected); // ERRORE 3: Corretto
+            lv_disp_load_scr(screen_ap_connected);
             break;
 
         case EventType::DISPLAY_CLEAR:
@@ -280,7 +265,7 @@ namespace CloudMouse::Hardware
         lv_obj_align(label_hello_status, LV_ALIGN_CENTER, 0, 20);
         
         lv_obj_t* instructions = lv_label_create(screen_hello_world);
-        lv_label_set_text(instructions, "Gira l'encoder o premi il pulsante");
+        lv_label_set_text(instructions, "Rotate the knob or push the button");
         lv_obj_set_style_text_color(instructions, lv_color_hex(0x888888), 0);
         lv_obj_align(instructions, LV_ALIGN_BOTTOM_MID, 0, -20);
     }
@@ -335,7 +320,6 @@ namespace CloudMouse::Hardware
         lv_qrcode_set_dark_color(qr_ap_mode, lv_color_hex(0x000000));
         lv_qrcode_set_light_color(qr_ap_mode, lv_color_hex(0xFFFFFF));
         
-        // ERRORE 4: Rimosso l'argomento 'length'
         lv_qrcode_set_data(qr_ap_mode, "WIFI:T:WPA;S:...;P:...;;"); 
         lv_obj_align(qr_ap_mode, LV_ALIGN_CENTER, 0, 40);
     }
@@ -361,7 +345,6 @@ namespace CloudMouse::Hardware
         lv_qrcode_set_dark_color(qr_ap_connected, lv_color_hex(0x000000));
         lv_qrcode_set_light_color(qr_ap_connected, lv_color_hex(0xFFFFFF));
         
-        // ERRORE 4: Rimosso l'argomento 'length'
         lv_qrcode_set_data(qr_ap_connected, "http://..."); 
         lv_obj_align(qr_ap_connected, LV_ALIGN_CENTER, 0, 30);
         
