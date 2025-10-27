@@ -1,30 +1,3 @@
-/**
- * CloudMouse SDK - Display Management System Implementation
- *
- * Implementation of comprehensive display controller with event-driven UI management,
- * hardware-accelerated sprite rendering, and integrated QR code generation capabilities.
- *
- * Implementation Architecture:
- * - Event-driven state machine for responsive screen management
- * - PSRAM-buffered sprite rendering for flicker-free updates
- * - Modular screen rendering system for maintainable UI development
- * - Optimized animation timing for smooth visual feedback
- * - Memory-efficient resource management with automatic cleanup
- *
- * Performance Optimizations:
- * - Hardware-accelerated SPI transfers (40MHz sustained)
- * - PSRAM utilization to preserve main RAM for application logic
- * - Selective redraw regions to minimize unnecessary updates
- * - Frame rate limiting to balance smoothness with CPU usage
- * - Event-driven updates to eliminate polling overhead
- *
- * Integration Points:
- * - EventBus for inter-task communication and state synchronization
- * - QRCodeManager for dynamic QR code generation and rendering
- * - DeviceConfig for hardware-specific configuration values
- * - LGFX library for hardware-accelerated graphics operations
- */
-
 #include "./DisplayManager.h"
 #include "../core/EventBus.h"
 
@@ -33,24 +6,43 @@ namespace CloudMouse::Hardware
     using namespace CloudMouse;
 
     // ============================================================================
+    // LVGL: Definizioni delle variabili statiche
+    // ============================================================================
+
+    // ERRORE 2: Rimosso lv_draw_buf_t DisplayManager::draw_buf;
+    lv_color_t *DisplayManager::buf1 = nullptr;
+    lv_color_t *DisplayManager::buf2 = nullptr;
+
+    // ============================================================================
     // CONSTRUCTOR AND DESTRUCTOR IMPLEMENTATION
     // ============================================================================
 
-    DisplayManager::DisplayManager()
+    DisplayManager::DisplayManager() : disp(nullptr), indev(nullptr) 
     {
-        // Constructor performs minimal initialization
-        // Actual hardware setup occurs in init() method for controlled timing
+        // ERRORE 1: 'indev' ora è dichiarato correttamente
     }
 
     DisplayManager::~DisplayManager()
     {
-        // Ensure proper cleanup of sprite resources to prevent memory leaks
-        if (sprite)
+        if (buf1)
         {
-            delete sprite;
-            sprite = nullptr;
-            Serial.println("🖥️ Sprite buffer deallocated");
+            free(buf1); 
+            buf1 = nullptr;
         }
+        if (buf2)
+        {
+            free(buf2);
+            buf2 = nullptr;
+        }
+        Serial.println("🖥️ Buffer LVGL deallocati");
+
+        // ERRORE 1: Corrette le funzioni di delete
+        if (indev) lv_indev_delete(indev);
+        if (disp) lv_display_delete(disp);
+        
+        lvgl_ticker.detach(); 
+
+        lv_deinit();
     }
 
     // ============================================================================
@@ -59,84 +51,107 @@ namespace CloudMouse::Hardware
 
     void DisplayManager::init()
     {
-        Serial.println("🖥️ Initializing DisplayManager...");
+        Serial.println("🖥️ Initializing DisplayManager con LVGL v9...");
 
-        // Initialize ILI9488 display hardware
-        // Configures SPI interface, power management, and display orientation
         display.init();
-        display.setBrightness(200); // Set brightness (0-255 range)
+        display.setBrightness(200);
 
-        // Create full-screen sprite buffer in PSRAM for flicker-free rendering
-        // Using PSRAM preserves main RAM for application logic and improves performance
-        sprite = new LGFX_Sprite(&display);
+        lv_init();
+        lvgl_ticker.attach_ms(5, lv_tick_task);
 
-        if (!sprite)
+        const size_t bufSize = 480 * 32; 
+        buf1 = (lv_color_t *)ps_malloc(sizeof(lv_color_t) * bufSize);
+        buf2 = (lv_color_t *)ps_malloc(sizeof(lv_color_t) * bufSize);
+
+        if (!buf1 || !buf2)
         {
-            Serial.println("❌ Failed to allocate sprite object!");
+            Serial.println("❌ Fallita allocazione buffer LVGL in PSRAM!");
             return;
         }
+        Serial.printf("✅ Buffer LVGL allocati in PSRAM (2x %d bytes)\n", sizeof(lv_color_t) * bufSize);
 
-        // Configure sprite for PSRAM usage and optimal color depth
-        sprite->setPsram(true);    // Enable PSRAM allocation for large buffers
-        sprite->setColorDepth(16); // 16-bit RGB565 color (65,536 colors)
+        // ERRORE 2: Rimossa la chiamata a lv_draw_buf_init
 
-        // Create full-screen sprite buffer (480×320×2 bytes = 307,200 bytes)
-        bool spriteCreated = sprite->createSprite(480, 320);
-
-        if (spriteCreated)
-        {
-            initialized = true;
-            Serial.println("✅ Sprite buffer created successfully");
-            Serial.printf("   Resolution: %dx%d pixels\n", getWidth(), getHeight());
-            Serial.printf("   Color depth: 16-bit RGB565\n");
-            Serial.printf("   Buffer size: %d bytes\n", 480 * 320 * 2);
-            Serial.printf("   Memory location: PSRAM\n");
-
-            // Initialize QR code manager with sprite reference
-            qrCodeManager.init(sprite);
-
-            // Set default text rendering properties for consistent appearance
-            sprite->setTextColor(COLOR_TEXT);
-            sprite->setTextDatum(MC_DATUM); // Middle-center text alignment
+        // 5. Inizializza il driver del display LVGL (v9)
+        disp = lv_display_create(getWidth(), getHeight());
+        if (disp == NULL) {
+             Serial.println("❌ Fallita creazione display LVGL!");
+             return;
         }
-        else
-        {
-            Serial.println("❌ Failed to create sprite buffer - insufficient PSRAM!");
-            Serial.printf("   Required: %d bytes\n", 480 * 320 * 2);
-            Serial.printf("   Available PSRAM: %d bytes\n", ESP.getFreePsram());
-            return;
-        }
+        lv_display_set_flush_cb(disp, lvgl_flush_cb);
+        lv_display_set_buffers(disp, buf1, buf2, bufSize * sizeof(lv_color_t), LV_DISPLAY_RENDER_MODE_PARTIAL); // Passa la dimensione in bytes
+        lv_display_set_user_data(disp, this);
 
-        // Log successful initialization with system status
-        Serial.printf("✅ DisplayManager initialized successfully\n");
-        Serial.printf("   Display resolution: %dx%d\n", getWidth(), getHeight());
-        Serial.printf("   Sprite memory usage: %d bytes\n", 480 * 320 * 2);
-        Serial.printf("   Free PSRAM after allocation: %d bytes\n", ESP.getFreePsram());
-        Serial.printf("   Initial screen: HELLO_WORLD\n");
+        // 6. Inizializza il driver di input LVGL (Encoder) (v9)
+        // ERRORE 1: Corrette le funzioni 'indev'
+        indev = lv_indev_create();
+        if (indev == NULL) {
+             Serial.println("❌ Fallita creazione indev LVGL!");
+             return;
+        }
+        lv_indev_set_type(indev, LV_INDEV_TYPE_ENCODER);
+        lv_indev_set_read_cb(indev, lvgl_encoder_read_cb);
+        lv_indev_set_user_data(indev, this);
+
+        // 7. Crea un gruppo e assegnalo all'encoder
+        encoder_group = lv_group_create();
+        lv_group_set_default(encoder_group);
+        lv_indev_set_group(indev, encoder_group); // ERRORE 1: Corretta
+
+        // 8. Crea l'interfaccia utente LVGL
+        Serial.println("🎨 Creazione UI LVGL...");
+        createUi();
+
+        // 9. Carica la schermata iniziale
+        lv_disp_load_scr(screen_hello_world); // ERRORE 3: Corretto (era lv_display_load_scr)
+
+        initialized = true;
+        Serial.printf("✅ DisplayManager con LVGL v9 inizializzato con successo\n");
     }
 
     void DisplayManager::update()
     {
-        // Process all pending events from EventBus (non-blocking)
-        // Events drive screen state changes and UI updates
         Event event;
         while (EventBus::instance().receiveFromMain(event, 0))
         {
             processEvent(event);
         }
+        // lv_tick_inc(5);
+        lv_timer_handler();
+    }
 
-        // Handle continuous animation updates for animated screens
-        // Only processes animations when needsRedraw flag is set to optimize CPU usage
-        if (needsRedraw && currentScreen == Screen::WIFI_CONNECTING)
+    // ============================================================================
+    // LVGL: "Glue" Callback Implementations (v9)
+    // ============================================================================
+
+    void DisplayManager::lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
+    {
+        DisplayManager *self = (DisplayManager *)lv_display_get_user_data(disp);
+        if (!self) return;
+
+        uint32_t w = lv_area_get_width(area);
+        uint32_t h = lv_area_get_height(area);
+
+        // ERRORE 5: Cast corretto a (uint16_t *) invece di (lv_color_t *)
+        // Questo permette a LGFX di usare la sua template corretta per uint16_t.
+        self->display.pushImage(area->x1, area->y1, w, h, (uint16_t *)px_map);
+
+        lv_display_flush_ready(disp);
+    }
+
+    // ERRORE 1: Corretta la signature della funzione
+    void DisplayManager::lvgl_encoder_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+    {
+        DisplayManager *self = (DisplayManager *)lv_indev_get_user_data(indev); // Corretto
+        if (!self) return;
+
+        data->enc_diff = self->encoder_diff;
+        data->state = self->encoder_state;
+
+        self->encoder_diff = 0;
+        if (self->encoder_state == LV_INDEV_STATE_PRESSED)
         {
-            static unsigned long lastAnimationUpdate = 0;
-
-            // Limit animation frame rate to 10fps (100ms intervals) for smooth appearance
-            if (millis() - lastAnimationUpdate >= WIFI_CONNECTING_RENDER_INTERVAL)
-            {
-                renderWiFiConnecting();
-                lastAnimationUpdate = millis();
-            }
+            self->encoder_state = LV_INDEV_STATE_RELEASED;
         }
     }
 
@@ -146,354 +161,213 @@ namespace CloudMouse::Hardware
 
     void DisplayManager::processEvent(const Event &event)
     {
-        // Process display-related events and trigger appropriate screen updates
-        // Each event type corresponds to specific UI state changes or user interactions
-
         switch (event.type)
         {
         case EventType::DISPLAY_WAKE_UP:
-            // Display activation - show default interactive screen
-            Serial.println("📺 Display wake up - switching to HELLO_WORLD");
             currentScreen = Screen::HELLO_WORLD;
-            needsRedraw = false; // Static screen, no continuous animation
-            renderHelloWorld();
+            lv_disp_load_scr(screen_hello_world); // ERRORE 3: Corretto
             break;
 
         case EventType::DISPLAY_WIFI_CONNECTING:
-            // WiFi connection attempt - show animated progress screen
-            Serial.println("📡 Display: Showing WiFi connecting screen with animation");
             currentScreen = Screen::WIFI_CONNECTING;
-            needsRedraw = true; // Enable continuous animation for spinner
-            renderWiFiConnecting();
+            lv_disp_load_scr(screen_wifi_connecting); // ERRORE 3: Corretto
             break;
 
         case EventType::ENCODER_ROTATION:
-            // Encoder interaction - update interactive feedback
-            Serial.printf("🔄 Display received encoder rotation: %d\n", event.value);
-            lastEncoderValue = event.value;
+            Serial.println("DISPLAY ENCODER READING ROTATION");
+            Serial.println(event.value);
 
-            // Return to default screen and stop any animations
-            currentScreen = Screen::HELLO_WORLD;
-            needsRedraw = false;
-            lastWiFiConnectingRender = 0;
-            renderHelloWorld();
+            encoder_diff += event.value; 
+            if (currentScreen == Screen::HELLO_WORLD) {
+                lv_label_set_text_fmt(label_hello_status, "Rotazione: %s", event.value > 0 ? "DESTRA" : "SINISTRA");
+            }
             break;
 
         case EventType::ENCODER_CLICK:
-            // Button click - record interaction and update display if on interactive screen
-            Serial.println("🖱️ Display received encoder click");
-            lastClickTime = millis();
-            if (currentScreen == Screen::HELLO_WORLD)
-            {
-                renderHelloWorld(); // Update to show click feedback
+            encoder_state = LV_INDEV_STATE_PRESSED;
+            if (currentScreen == Screen::HELLO_WORLD) {
+                lv_label_set_text(label_hello_status, "Click!");
             }
             break;
 
         case EventType::ENCODER_LONG_PRESS:
-            // Long press - record interaction and update display if on interactive screen
-            Serial.println("⏱️ Display received encoder long press");
-            lastLongPressTime = millis();
-            if (currentScreen == Screen::HELLO_WORLD)
-            {
-                renderHelloWorld(); // Update to show long press feedback
+            encoder_state = LV_INDEV_STATE_PRESSED; 
+            if (currentScreen == Screen::HELLO_WORLD) {
+                lv_label_set_text(label_hello_status, "Long Press!");
             }
             break;
 
         case EventType::DISPLAY_WIFI_AP_MODE:
-            // Access Point mode - show WiFi connection QR code
-            Serial.println("📱 Switching to AP Mode screen - WiFi setup required");
             currentScreen = Screen::WIFI_AP_MODE;
-            needsRedraw = false; // Static QR code, no animation needed
-            renderAPMode();
+            { 
+                String apSSID = GET_AP_SSID();
+                String apPassword = GET_AP_PASSWORD();
+                String qrData = String("WIFI:T:WPA;S:") + apSSID + ";P:" + apPassword + ";;";
+                
+                lv_label_set_text(label_ap_mode_ssid, apSSID.c_str());
+                lv_label_set_text(label_ap_mode_pass, apPassword.c_str());
+                // ERRORE 4: Rimosso l'argomento 'length'
+                lv_qrcode_set_data(qr_ap_mode, qrData.c_str());
+            }
+            lv_disp_load_scr(screen_ap_mode); // ERRORE 3: Corretto
             break;
 
         case EventType::DISPLAY_WIFI_SETUP_URL:
-            // Client connected to AP - show web configuration QR code
-            Serial.println("🌐 Switching to AP Connected screen - web setup available");
             currentScreen = Screen::WIFI_AP_CONNECTED;
-            needsRedraw = false; // Static configuration screen
-            renderAPConnected();
+            
+            // ERRORE 4: Rimosso l'argomento 'length'
+            lv_qrcode_set_data(qr_ap_connected, WIFI_CONFIG_SERVICE);
+            lv_label_set_text(label_ap_connected_url, WIFI_CONFIG_SERVICE);
+
+            lv_disp_load_scr(screen_ap_connected); // ERRORE 3: Corretto
             break;
 
         case EventType::DISPLAY_CLEAR:
-            // Clear screen command - immediate screen clear
-            Serial.println("🧹 Display clear requested");
-            if (sprite)
-            {
-                sprite->fillSprite(COLOR_BG);
-                pushSprite();
-            }
+            lv_obj_clean(lv_screen_active()); 
             break;
 
         default:
-            // Unhandled event type - log for debugging but continue operation
-            Serial.printf("⚠️ DisplayManager: Unhandled event type %d\n", (int)event.type);
             break;
         }
     }
 
     // ============================================================================
-    // SCREEN RENDERING IMPLEMENTATIONS
+    // LVGL: UI Creation Methods (v9)
     // ============================================================================
 
-    void DisplayManager::renderHelloWorld()
-    {
-        if (!sprite)
-        {
-            Serial.println("❌ Cannot render - sprite not initialized");
-            return;
-        }
+    lv_obj_t* DisplayManager::createHeader(lv_obj_t* parent, const char* title) {
+        lv_obj_t* header = lv_obj_create(parent);
+        lv_obj_set_size(header, 480, 40);
+        lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(header, lv_color_hex(0x222222), 0);
+        lv_obj_set_style_border_width(header, 0, 0);
+        lv_obj_set_style_radius(header, 0, 0);
 
-        // Clear screen with background color
-        sprite->fillSprite(COLOR_BG);
-
-        // Draw consistent header across all screens
-        drawHeader("CloudMouse Boilerplate");
-
-        // Main title with large, prominent text
-        sprite->setTextSize(3);
-        drawCenteredText("Hello CloudMouse!", 100, COLOR_ACCENT);
-
-        // Dynamic encoder status display based on recent interactions
-        sprite->setTextSize(2);
-
-        // Show recent button interactions with 2-second timeout for visual feedback
-        if (millis() - lastClickTime < 2000 && lastClickTime > 0)
-        {
-            drawCenteredText("Button Clicked!", 160, COLOR_SUCCESS);
-        }
-        else if (millis() - lastLongPressTime < 2000 && lastLongPressTime > 0)
-        {
-            drawCenteredText("Long Press!", 160, COLOR_WARNING);
-        }
-        else if (lastEncoderValue > 0)
-        {
-            drawCenteredText("Rotating RIGHT", 160, COLOR_TEXT);
-        }
-        else if (lastEncoderValue < 0)
-        {
-            drawCenteredText("Rotating LEFT", 160, COLOR_TEXT);
-        }
-        else
-        {
-            drawCenteredText("Ready!", 160, COLOR_TEXT);
-        }
-
-        // Usage instructions for user guidance
-        drawInstructions();
-
-        // Transfer sprite buffer to display hardware
-        pushSprite();
+        lv_obj_t* label = lv_label_create(header);
+        lv_label_set_text(label, title);
+        lv_obj_set_style_text_color(label, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_center(label);
+        
+        return header;
     }
 
-    void DisplayManager::renderWiFiConnecting()
+    void DisplayManager::createUi()
     {
-        if (!sprite)
-        {
-            Serial.println("❌ Cannot render - sprite not initialized");
-            return;
-        }
+        lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(COLOR_BG), 0); 
 
-        // Clear screen for animation frame
-        sprite->fillSprite(COLOR_BG);
-
-        // Draw header
-        drawHeader("CloudMouse Boilerplate");
-
-        // Connection status title
-        sprite->setTextSize(3);
-        drawCenteredText("Connecting to WiFi", 120, COLOR_ACCENT);
-
-        // Animated text with variable dot count (2Hz update rate)
-        static int dotCount = 0;
-        static unsigned long lastDotUpdate = 0;
-
-        if (millis() - lastDotUpdate > 500)
-        { // 500ms = 2Hz
-            lastDotUpdate = millis();
-            dotCount = (dotCount + 1) % 4; // Cycle 0-3 dots
-        }
-
-        // Build animated dots string
-        String dots = "";
-        for (int i = 0; i < dotCount; i++)
-        {
-            dots += ".";
-        }
-
-        sprite->setTextSize(2);
-        drawCenteredText("Please wait" + dots, 170, COLOR_TEXT);
-
-        // Animated circular spinner (12 positions, 10fps rotation)
-        int centerX = 240;                 // Screen center X
-        int centerY = 230;                 // Spinner Y position
-        int radius = 20;                   // Spinner radius
-        int frame = (millis() / 100) % 12; // 100ms per frame = 10fps
-
-        // Draw 12 dots in circle with one highlighted position
-        for (int i = 0; i < 12; i++)
-        {
-            float angle = (i * 30) * PI / 180.0; // 30 degrees per position
-            int x = centerX + cos(angle) * radius;
-            int y = centerY + sin(angle) * radius;
-
-            // Highlight current frame position, dim others
-            uint16_t color = (i == frame) ? COLOR_ACCENT : 0x4208; // Bright or dim
-            sprite->fillCircle(x, y, 3, color);
-        }
-
-        // Update display with animation frame
-        pushSprite();
+        createHelloWorldScreen();
+        createWifiConnectingScreen();
+        createApModeScreen();
+        createApConnectedScreen();
     }
 
-    void DisplayManager::renderAPMode()
+    void DisplayManager::createHelloWorldScreen()
     {
-        if (!sprite)
-        {
-            Serial.println("❌ Cannot render - sprite not initialized");
-            return;
-        }
+        screen_hello_world = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(screen_hello_world, lv_color_hex(COLOR_BG), 0);
+        createHeader(screen_hello_world, "CloudMouse Boilerplate");
 
-        // Clear screen
-        sprite->fillSprite(TFT_DARKGRAY);
+        lv_obj_t* title = lv_label_create(screen_hello_world);
+        lv_label_set_text(title, "Hello CloudMouse!");
+        lv_obj_set_style_text_color(title, lv_color_hex(COLOR_ACCENT), 0);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_28, 0);
+        lv_obj_align(title, LV_ALIGN_CENTER, 0, -40);
 
-        // Header for setup context
-        drawHeader("WiFi Setup Required");
-
-        // Setup instructions
-        sprite->setTextSize(2);
-        drawCenteredText("Connect to CloudMouse", 60, COLOR_ACCENT);
-
-        // Access Point credentials display
-        sprite->setTextSize(1.5);
-        String apSSID = GET_AP_SSID();
-        String apPassword = GET_AP_PASSWORD();
-
-        drawCenteredText("WiFi Network:", 90, COLOR_TEXT);
-        drawCenteredText(apSSID, 115, COLOR_SUCCESS);
-        drawCenteredText(apPassword, 135, COLOR_SUCCESS);
-
-        // Generate and display QR code for WiFi connection
-        int qrX = 154;       // Center horizontally for QR code
-        int qrY = 154;       // Vertical position for QR code
-        int qrPixelSize = 4; // QR code pixel scaling
-
-        // Create WiFi connection string in standard format
-        String qrData = String("WIFI:T:WPA;S:") + apSSID + ";P:" + apPassword + ";;";
-        qrCodeManager.setOffset(qrX, qrY);
-        qrCodeManager.setPixelSize(qrPixelSize);
-        qrCodeManager.create(qrData.c_str());
-
-        // Optional IP address display (commented for cleaner UI)
-        // sprite->setTextSize(1.5);
-        // drawCenteredText("or visit: " + apIP, 290, COLOR_TEXT);
-
-        // Update display with QR code and credentials
-        pushSprite();
+        label_hello_status = lv_label_create(screen_hello_world);
+        lv_label_set_text(label_hello_status, "Ready!");
+        lv_obj_set_style_text_color(label_hello_status, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_set_style_text_font(label_hello_status, &lv_font_montserrat_20, 0);
+        lv_obj_align(label_hello_status, LV_ALIGN_CENTER, 0, 20);
+        
+        lv_obj_t* instructions = lv_label_create(screen_hello_world);
+        lv_label_set_text(instructions, "Gira l'encoder o premi il pulsante");
+        lv_obj_set_style_text_color(instructions, lv_color_hex(0x888888), 0);
+        lv_obj_align(instructions, LV_ALIGN_BOTTOM_MID, 0, -20);
     }
 
-    void DisplayManager::renderAPConnected()
+    void DisplayManager::createWifiConnectingScreen()
     {
-        if (!sprite)
-        {
-            Serial.println("❌ Cannot render - sprite not initialized");
-            return;
-        }
+        screen_wifi_connecting = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(screen_wifi_connecting, lv_color_hex(COLOR_BG), 0);
+        createHeader(screen_wifi_connecting, "CloudMouse Boilerplate");
 
-        // Success-themed background color
-        sprite->fillSprite(TFT_DARKGREEN);
+        lv_obj_t* title = lv_label_create(screen_wifi_connecting);
+        lv_label_set_text(title, "Connecting to WiFi");
+        lv_obj_set_style_text_color(title, lv_color_hex(COLOR_ACCENT), 0);
+        lv_obj_set_style_text_font(title, &lv_font_montserrat_28, 0);
+        lv_obj_align(title, LV_ALIGN_CENTER, 0, -40);
 
-        // Header for configuration context
-        drawHeader("WiFi Configuration");
+        label_wifi_status = lv_label_create(screen_wifi_connecting);
+        lv_label_set_text(label_wifi_status, "Please wait...");
+        lv_obj_set_style_text_color(label_wifi_status, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_set_style_text_font(label_wifi_status, &lv_font_montserrat_20, 0);
+        lv_obj_align(label_wifi_status, LV_ALIGN_CENTER, 0, 20);
 
-        // Success confirmation
-        sprite->setTextSize(2);
-        drawCenteredText("✅ Connected!", 60, COLOR_SUCCESS);
-
-        // Instructions for next step
-        sprite->setTextSize(1.5);
-        drawCenteredText("Scan QR to setup WiFi", 100, COLOR_TEXT);
-
-        // QR code for web configuration interface
-        int qrSize = 172;             // QR code dimensions
-        int qrX = (480 - qrSize) / 2; // Center horizontally
-        int qrY = 130;                // Vertical position
-        int qrPixelSize = 4;          // Pixel scaling factor
-
-        // Generate QR code with web configuration URL
-        qrCodeManager.setOffset(qrX, qrY);
-        qrCodeManager.setPixelSize(qrPixelSize);
-        qrCodeManager.create(WIFI_CONFIG_SERVICE);
-
-        // Display configuration URL for manual entry
-        sprite->setTextSize(1.5);
-        drawCenteredText(WIFI_CONFIG_SERVICE, 290, COLOR_TEXT);
-
-        // Update display with configuration interface
-        pushSprite();
+        spinner_wifi = lv_spinner_create(screen_wifi_connecting);
+        lv_obj_set_size(spinner_wifi, 64, 64);
+        lv_obj_align(spinner_wifi, LV_ALIGN_CENTER, 0, 80);
+        lv_obj_set_style_arc_color(spinner_wifi, lv_color_hex(COLOR_ACCENT), LV_PART_INDICATOR);
     }
 
-    // ============================================================================
-    // SPRITE BUFFER MANAGEMENT
-    // ============================================================================
-
-    void DisplayManager::pushSprite()
+    void DisplayManager::createApModeScreen()
     {
-        // Transfer sprite buffer contents to physical display via SPI
-        // This operation provides flicker-free updates through double buffering
-        if (sprite)
-        {
-            sprite->pushSprite(0, 0); // Push to position (0,0) - full screen
-        }
-        else
-        {
-            Serial.println("⚠️ Cannot push sprite - buffer not initialized");
-        }
+        screen_ap_mode = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(screen_ap_mode, lv_color_hex(TFT_DARKGRAY), 0);
+        createHeader(screen_ap_mode, "WiFi Setup Required");
+
+        lv_obj_t* title = lv_label_create(screen_ap_mode);
+        lv_label_set_text(title, "Connect to CloudMouse");
+        lv_obj_set_style_text_color(title, lv_color_hex(COLOR_ACCENT), 0);
+        lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 60);
+
+        label_ap_mode_ssid = lv_label_create(screen_ap_mode);
+        lv_label_set_text(label_ap_mode_ssid, "SSID: ...");
+        lv_obj_set_style_text_color(label_ap_mode_ssid, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_align(label_ap_mode_ssid, LV_ALIGN_TOP_MID, 0, 90);
+
+        label_ap_mode_pass = lv_label_create(screen_ap_mode);
+        lv_label_set_text(label_ap_mode_pass, "Pass: ...");
+        lv_obj_set_style_text_color(label_ap_mode_pass, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_align(label_ap_mode_pass, LV_ALIGN_TOP_MID, 0, 110);
+
+        qr_ap_mode = lv_qrcode_create(screen_ap_mode);
+        lv_obj_set_size(qr_ap_mode, 180, 180); 
+        lv_qrcode_set_dark_color(qr_ap_mode, lv_color_hex(0x000000));
+        lv_qrcode_set_light_color(qr_ap_mode, lv_color_hex(0xFFFFFF));
+        
+        // ERRORE 4: Rimosso l'argomento 'length'
+        lv_qrcode_set_data(qr_ap_mode, "WIFI:T:WPA;S:...;P:...;;"); 
+        lv_obj_align(qr_ap_mode, LV_ALIGN_CENTER, 0, 40);
     }
 
-    // ============================================================================
-    // UI ELEMENT RENDERING UTILITIES
-    // ============================================================================
-
-    void DisplayManager::drawHeader(const String &title)
+    void DisplayManager::createApConnectedScreen()
     {
-        // Draw consistent header design across all screens
-        // Provides visual continuity and branding consistency
+        screen_ap_connected = lv_obj_create(NULL);
+        lv_obj_set_style_bg_color(screen_ap_connected, lv_color_hex(TFT_DARKGREEN), 0);
+        createHeader(screen_ap_connected, "WiFi Configuration");
 
-        // Header background with dark blue gradient effect
-        sprite->fillRect(0, 0, 480, 50, 0x0010);   // Dark blue background
-        sprite->drawFastHLine(0, 50, 480, 0x001F); // Blue accent line
+        lv_obj_t* title = lv_label_create(screen_ap_connected);
+        lv_label_set_text(title, "✅ Connected!");
+        lv_obj_set_style_text_color(title, lv_color_hex(COLOR_SUCCESS), 0);
+        lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 60);
+        
+        lv_obj_t* subtitle = lv_label_create(screen_ap_connected);
+        lv_label_set_text(subtitle, "Scan QR to setup WiFi");
+        lv_obj_set_style_text_color(subtitle, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_align(subtitle, LV_ALIGN_TOP_MID, 0, 90);
 
-        // Header text with centered alignment
-        sprite->setTextSize(2);
-        sprite->setTextColor(COLOR_TEXT);
-        sprite->setTextDatum(MC_DATUM);     // Middle-center alignment
-        sprite->drawString(title, 240, 25); // Center of header area
+        qr_ap_connected = lv_qrcode_create(screen_ap_connected);
+        lv_obj_set_size(qr_ap_connected, 180, 180); 
+        lv_qrcode_set_dark_color(qr_ap_connected, lv_color_hex(0x000000));
+        lv_qrcode_set_light_color(qr_ap_connected, lv_color_hex(0xFFFFFF));
+        
+        // ERRORE 4: Rimosso l'argomento 'length'
+        lv_qrcode_set_data(qr_ap_connected, "http://..."); 
+        lv_obj_align(qr_ap_connected, LV_ALIGN_CENTER, 0, 30);
+        
+        label_ap_connected_url = lv_label_create(screen_ap_connected);
+        lv_label_set_text(label_ap_connected_url, "http://..."); 
+        lv_obj_set_style_text_color(label_ap_connected_url, lv_color_hex(COLOR_TEXT), 0);
+        lv_obj_align(label_ap_connected_url, LV_ALIGN_BOTTOM_MID, 0, -20);
     }
-
-    void DisplayManager::drawCenteredText(const String &text, int y, uint16_t color)
-    {
-        // Utility for consistent centered text rendering
-        // Simplifies text positioning and maintains visual alignment
-        sprite->setTextColor(color);
-        sprite->setTextDatum(MC_DATUM);   // Middle-center alignment
-        sprite->drawString(text, 240, y); // Center horizontally at 240px
-    }
-
-    void DisplayManager::drawInstructions()
-    {
-        // Draw usage instructions footer for user guidance
-        // Provides consistent help text across interactive screens
-
-        sprite->setTextSize(1);
-        sprite->setTextColor(0x7BEF); // Light gray for secondary information
-
-        int startY = 220;    // Starting Y position for instructions
-        int lineHeight = 20; // Vertical spacing between instruction lines
-
-        // Multi-line instruction text with consistent spacing
-        drawCenteredText("Rotate: Turn encoder left/right", startY, 0x7BEF);
-        drawCenteredText("Click: Press encoder button", startY + lineHeight, 0x7BEF);
-        drawCenteredText("Long Press: Hold encoder button", startY + lineHeight * 2, 0x7BEF);
-    }
-}
+} // namespace CloudMouse::Hardware

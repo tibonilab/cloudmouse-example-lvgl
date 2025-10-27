@@ -205,7 +205,7 @@ namespace CloudMouse
         }
 
         // Return to main interface
-        Event helloEvent(EventType::ENCODER_ROTATION, 0);
+        Event helloEvent(EventType::DISPLAY_WAKE_UP);
         EventBus::instance().sendToUI(helloEvent);
 
         setState(SystemState::READY);

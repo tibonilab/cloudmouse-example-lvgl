@@ -39,6 +39,17 @@ WiFiManager wifi;
 WebServerManager webServer(wifi);
 LEDManager ledManager;
 
+Ticker lvgl_ticker;
+
+/**
+ * @brief Callback del Ticker per LVGL.
+ * Questa funzione è un "Interrupt Service Routine" (ISR) leggero.
+ * DEVE essere globale o statica.
+ */
+void lv_tick_task(void) {
+    lv_tick_inc(5); // 3. Informa LVGL che sono passati 5ms
+}
+
 void setup() {
     Serial.begin(115200);
     delay(1000);
@@ -65,6 +76,8 @@ void setup() {
     Core::instance().startUITask();     // UI rendering on Core 1
     Core::instance().initialize();      // Event system on Core 0
     
+    lvgl_ticker.attach_ms(5, lv_tick_task);
+
     Serial.println("✅ System ready!");
 }
 
