@@ -62,6 +62,14 @@
 #include "../config/DeviceConfig.h"
 
 /**
+ * Operational and idle brightness targets with dimmer fade out
+ */
+#define BRIGHTNESS_UP_TARGET 180
+#define BRIGHTNESS_IDLE_TARGET 10
+#define FADE_OUT_STEP_DELAY_MS 20
+#define FADE_OUT_STEP_VALUE 2
+
+/**
  * Display Management Controller
  *
  * High-level display controller providing event-driven UI management with multiple
@@ -285,6 +293,11 @@ namespace CloudMouse::Hardware
         // Legacy state variables (maintained for compatibility)
         bool inAPMode = false; // Access Point mode flag
 
+        // Brightness management variables
+        int currentBrightness = BRIGHTNESS_UP_TARGET;
+        unsigned long lastInteractionTime = 0;
+        unsigned long lastFadeTime = 0;
+
         // ========================================================================
         // UI COLOR SCHEME DEFINITIONS
         // ========================================================================
@@ -362,5 +375,12 @@ namespace CloudMouse::Hardware
          * Provides consistent user guidance across interactive screens
          */
         void drawInstructions();
+
+        // ========================================================================
+        // SCREEN BRIGHTNESS MANAGEMENT
+        // ========================================================================
+        
+        void wakeUp();
+        void handleDimmer();
     };
 };

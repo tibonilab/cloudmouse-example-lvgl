@@ -138,6 +138,46 @@ namespace CloudMouse::Hardware
                 lastAnimationUpdate = millis();
             }
         }
+
+        handleDimmer();
+    }
+
+    void DisplayManager::handleDimmer() {
+      const unsigned long IDLE_TIMEOUT_MS = 10000; // 10 secondi di inattività
+
+      // Verifica la modalità IDLE
+      if (millis() - lastInteractionTime > IDLE_TIMEOUT_MS) {
+          
+        // Verifica se è il momento di eseguire il prossimo passo di fade
+        if (millis() - lastFadeTime > FADE_OUT_STEP_DELAY_MS) {
+            
+          // int currentBrightness = display.getBrightness(); // Assumendo che esista questa funzione o una variabile
+          
+          // Controlla se abbiamo raggiunto il target IDLE
+          if (currentBrightness > BRIGHTNESS_IDLE_TARGET) {
+              
+            // 1. Calcola la nuova luminosità
+            currentBrightness = currentBrightness - FADE_OUT_STEP_VALUE;
+            
+            // 2. Assicurati che non scenda sotto il target
+            if (currentBrightness < BRIGHTNESS_IDLE_TARGET) {
+                currentBrightness = BRIGHTNESS_IDLE_TARGET;
+            }
+            
+            // 3. Applica il nuovo valore
+            display.setBrightness(currentBrightness);
+            
+            // 4. Aggiorna il timer
+            lastFadeTime = millis();
+          }
+        }
+      }
+    }
+
+    void DisplayManager::wakeUp() {
+      lastInteractionTime = millis();
+      currentBrightness = BRIGHTNESS_UP_TARGET;
+      display.setBrightness(BRIGHTNESS_UP_TARGET);
     }
 
     // ============================================================================
@@ -152,6 +192,7 @@ namespace CloudMouse::Hardware
         switch (event.type)
         {
         case EventType::DISPLAY_WAKE_UP:
+            wakeUp();
             // Display activation - show default interactive screen
             Serial.println("📺 Display wake up - switching to HELLO_WORLD");
             currentScreen = Screen::HELLO_WORLD;
@@ -168,6 +209,7 @@ namespace CloudMouse::Hardware
             break;
 
         case EventType::ENCODER_ROTATION:
+            wakeUp();
             // Encoder interaction - update interactive feedback
             Serial.printf("🔄 Display received encoder rotation: %d\n", event.value);
             lastEncoderValue = event.value;
@@ -180,6 +222,7 @@ namespace CloudMouse::Hardware
             break;
 
         case EventType::ENCODER_CLICK:
+            wakeUp();
             // Button click - record interaction and update display if on interactive screen
             Serial.println("🖱️ Display received encoder click");
             lastClickTime = millis();
@@ -190,6 +233,7 @@ namespace CloudMouse::Hardware
             break;
 
         case EventType::ENCODER_LONG_PRESS:
+            wakeUp();
             // Long press - record interaction and update display if on interactive screen
             Serial.println("⏱️ Display received encoder long press");
             lastLongPressTime = millis();
@@ -200,6 +244,7 @@ namespace CloudMouse::Hardware
             break;
 
         case EventType::DISPLAY_WIFI_AP_MODE:
+            wakeUp();
             // Access Point mode - show WiFi connection QR code
             Serial.println("📱 Switching to AP Mode screen - WiFi setup required");
             currentScreen = Screen::WIFI_AP_MODE;
@@ -208,6 +253,7 @@ namespace CloudMouse::Hardware
             break;
 
         case EventType::DISPLAY_WIFI_SETUP_URL:
+            wakeUp();
             // Client connected to AP - show web configuration QR code
             Serial.println("🌐 Switching to AP Connected screen - web setup available");
             currentScreen = Screen::WIFI_AP_CONNECTED;
