@@ -15,9 +15,25 @@ This example extends the CloudMouse SDK boilerplate by replacing the basic displ
 
 ## 🔧 Compatibility
 
-⚠️ **Arduino IDE Only**
+**Arduino IDE** - out-of-the-box.
+**Platformio** - with source code switching (see below!).
 
-This example is currently compatible with **Arduino IDE only**. PlatformIO support may be added in future releases.
+### Important: Source Code Switching
+
+> 💡 The project maintains a single codebase that works with both Arduino IDE and PlatformIO. The `src/main.cpp` file is kept in sync but needs to be toggled:
+
+**To use PlatformIO:**
+1. Open `src/main.cpp` in your editor
+2. **Uncomment the entire file**
+3. Save and build with PlatformIO
+
+**To switch back to Arduino IDE:**
+1. Open `src/main.cpp` in your editor
+2. **Re-comment the entire file**
+3. Save and build with Arduino IDE
+
+> 💡 **Pro tip**: Most editors support block comment toggling with `Ctrl+/` (Windows/Linux) or `Cmd+/` (Mac). Select all (`Ctrl+A`) then toggle comments!
+
 
 ## 📚 Prerequisites
 
