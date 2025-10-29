@@ -23,6 +23,7 @@ CloudMouse Boilerplate uses a dual-core architecture to maximize performance:
 
 ### Core 0 (Main/Networking)
 - WiFi management and connection handling
+- Bluetooth communication service
 - HTTP/WebSocket communication
 - Business logic and state machine
 - Event coordination
@@ -55,6 +56,7 @@ Install these via Arduino Library Manager:
 - **ArduinoJson** v7.0.0+ - JSON parsing
 - **AsyncTCP** v3.3.2+ - Async TCP for ESP32
 - **ESPAsyncWebServer** v3.6.0+ - Async web server
+- **ESP32 BLE Keyboard** v0.3.2+ - BLE Keyboard abstraction for Arduino
 
 **Utilities**
 - **QRCode** v0.0.1 - QR code generation for WiFi setup (ricmoo/QRCode)
@@ -95,7 +97,7 @@ cd boilerplate
    - Open `cloudmouse-boilerplate-platformio.ino` in Arduino IDE
    - Connect CloudMouse via USB-C
    - Click Upload
-   - If upload fails, hold BOOT button while clicking Upload
+   - If upload fails, hold BOOT button while connecting USB cable, then clicking Upload
 
 5. **Test**
    - Display shows "Hello CloudMouse!"
@@ -185,16 +187,16 @@ If you develop an ESP-IDF version, consider contributing it back! 🚀
 
 ```
 cloudmouse-boilerplate-platformio/
-├── cloudmouse-boilerplate-platformio.ino  # Main sketch (Arduino IDE)
-├── platformio.ini                         # PlatformIO configuration
+├── cloudmouse-boilerplate-platformio.ino   # Main sketch (Arduino IDE)
+├── platformio.ini                          # PlatformIO configuration
 ├── src/
-│   └── main.cpp                           # PlatformIO entry (toggle comments)
+│   └── main.cpp                            # PlatformIO entry (toggle comments)
 │
-├── lib/                                   # Core libraries
-│   ├── core/                              # Event system
-│   │   ├── Core.h / Core.cpp              # Main coordinator (Core 0)
-│   │   ├── EventBus.h / EventBus.cpp      # FreeRTOS queues
-│   │   └── Events.h                       # Event definitions
+├── lib/                                    # Core libraries
+│   ├── core/                               # Event system
+│   │   ├── Core.h / Core.cpp               # Main coordinator (Core 0)
+│   │   ├── EventBus.h / EventBus.cpp       # FreeRTOS queues
+│   │   └── Events.h                        # Event definitions
 │   │
 │   ├── hardware/                           # Hardware abstraction
 │   │   ├── DisplayManager.h/cpp            # ILI9488 display
@@ -205,6 +207,7 @@ cloudmouse-boilerplate-platformio/
 │   │   └── LGFX_ILI9488.h                  # Display config
 │   │
 │   ├── network/
+|   |   ├── BluetoothManager.h/cpp          # Bluetooth management
 │   │   ├── WiFiManager.h/cpp               # WiFi management
 │   │   ├── WebServerManager.h/cpp          # Web server
 │   │
@@ -286,15 +289,15 @@ EventBus::instance().sendToMain(event);
 
 ## 🎯 Next Steps
 
-1. **Examples** - [github.com/cloudmouse-co/examples](https://github.com/cloudmouse-co/examples)
-2. **Documentation** - [docs.cloudmouse.co](https://docs.cloudmouse.co)
+1. **Examples** - [cloudmouse.co/docs/example-code](https://cloudmouse.co//docs/example-code)
+2. **Documentation** - [cloudmouse.co/docs](https://cloudmouse.co/docs)
 3. **Community** - [Discord](https://discord.gg/cloudmouse)
 4. **Build!** - Fork and create something awesome! 🚀
 
 ## 🐛 Troubleshooting
 
 ### Upload fails
-- Hold BOOT button while uploading
+- Hold BOOT button while plugging-in, then upload
 - Try different USB cable
 - Check port selection
 
