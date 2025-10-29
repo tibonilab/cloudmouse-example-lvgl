@@ -56,10 +56,18 @@ Install these via Arduino Library Manager:
 - **ArduinoJson** v7.0.0+ - JSON parsing
 - **AsyncTCP** v3.3.2+ - Async TCP for ESP32
 - **ESPAsyncWebServer** v3.6.0+ - Async web server
-- **ESP32 BLE Keyboard** v0.3.2+ - BLE Keyboard abstraction for Arduino
+- **ESP32 BLE Keyboard** v0.3.2+ - BLE Keyboard abstraction for Arduino (included in this repo see below!)
 
 **Utilities**
 - **QRCode** v0.0.1 - QR code generation for WiFi setup (ricmoo/QRCode)
+
+#### 💡 BLE Keyboard Support
+
+The SDK includes a modified version of ESP32-BLE-Keyboard library 
+compatible with ESP32 core v3.x. This is temporary until the 
+upstream PR is merged.
+
+Original library: [https://github.com/T-vK/ESP32-BLE-Keyboard](https://github.com/T-vK/ESP32-BLE-Keyboard)
 
 ### For PlatformIO
 All dependencies are automatically managed via `platformio.ini` - no manual installation needed! 🎉
