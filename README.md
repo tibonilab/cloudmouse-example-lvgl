@@ -1,4 +1,4 @@
-# CloudMouse Boilerplate
+# CloudMouse SDK
 
 **Event-driven dual-core firmware for CloudMouse hardware**
 
@@ -19,7 +19,7 @@ A complete, ready-to-use starting point for building CloudMouse applications. Fo
 
 ## 🏗️ Architecture
 
-CloudMouse Boilerplate uses a dual-core architecture to maximize performance:
+CloudMouse SDK uses a dual-core architecture to maximize performance:
 
 ### Core 0 (Main/Networking)
 - WiFi management and connection handling
@@ -85,8 +85,8 @@ All dependencies are automatically managed via `platformio.ini` - no manual inst
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/cloudmouse-co/boilerplate.git
-cd boilerplate
+git clone https://github.com/cloudmouse-co/cloudmouse-sdk.git
+cd cloudmouse-sdk
 ```
 
 2. **Install required libraries**
@@ -102,7 +102,7 @@ cd boilerplate
    - Partition Scheme: `Default 4MB with spiffs`
 
 4. **Open and Upload**
-   - Open `cloudmouse-boilerplate-platformio.ino` in Arduino IDE
+   - Open `cloudmouse-sdk.ino` in Arduino IDE
    - Connect CloudMouse via USB-C
    - Click Upload
    - If upload fails, hold BOOT button while connecting USB cable, then clicking Upload
@@ -194,8 +194,8 @@ If you develop an ESP-IDF version, consider contributing it back! 🚀
 ## 📁 Project Structure
 
 ```
-cloudmouse-boilerplate-platformio/
-├── cloudmouse-boilerplate-platformio.ino   # Main sketch (Arduino IDE)
+cloudmouse-sdk/
+├── cloudmouse-sdk.ino   # Main sketch (Arduino IDE)
 ├── platformio.ini                          # PlatformIO configuration
 ├── src/
 │   └── main.cpp                            # PlatformIO entry (toggle comments)
@@ -240,7 +240,7 @@ cloudmouse-boilerplate-platformio/
 └── README.md                               # This file
 ```
 
-## 💡 What the Boilerplate Does
+## 💡 What the SDK Does
 
 When you upload the firmware, CloudMouse will:
 
@@ -297,7 +297,7 @@ EventBus::instance().sendToMain(event);
 
 ## 🎯 Next Steps
 
-1. **Examples** - [cloudmouse.co/docs/example-code](https://cloudmouse.co//docs/example-code)
+1. **Examples** - [cloudmouse.co/docs/example-code](https://cloudmouse.co/docs/example-code)
 2. **Documentation** - [cloudmouse.co/docs](https://cloudmouse.co/docs)
 3. **Community** - [Discord](https://discord.gg/cloudmouse)
 4. **Build!** - Fork and create something awesome! 🚀
@@ -346,7 +346,7 @@ MIT License - Free to use, modify, and distribute. See [LICENSE](LICENSE) for de
 - **Forum**: [forum.cloudmouse.co](https://forum.cloudmouse.co)
 - **GitHub**: [github.com/cloudmouse-co](https://github.com/cloudmouse-co)
 - **Website**: [cloudmouse.co](https://cloudmouse.co)
-- **Docs**: [docs.cloudmouse.co](https://docs.cloudmouse.co)
+- **Docs**: [cloudmouse.co/docs](https://cloudmouse.co/docs)
 
 ## 💖 Credits
 
@@ -354,7 +354,7 @@ Created by the CloudMouse Team.
 
 Special thanks to contributors and the maker community.
 
-**Technical Achievement**: This boilerplate features a custom cross-platform `RotaryEncoderPCNT` wrapper that seamlessly bridges ESP-IDF 4.4 and 5.x APIs, enabling true multi-platform compatibility between Arduino IDE and PlatformIO.
+**Technical Achievement**: This cloudmouse-sdk features a custom cross-platform `RotaryEncoderPCNT` wrapper that seamlessly bridges ESP-IDF 4.4 and 5.x APIs, enabling true multi-platform compatibility between Arduino IDE and PlatformIO.
 
 ---
 
