@@ -12,7 +12,7 @@
  * - Core 1: UI rendering, encoder input, display updates (30Hz)
  */
 
-#pragma once;
+#pragma once
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
