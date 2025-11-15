@@ -86,6 +86,13 @@ namespace CloudMouse
     void setWebServer(WebServerManager *webServer) { this->webServer = webServer; }
     void setLEDManager(LEDManager *ledManager) { this->ledManager = ledManager; }
 
+    // Hardware components getters
+    EncoderManager* getEncoder() const { return encoder; }
+    DisplayManager* getDisplay() const { return display; }
+    WiFiManager* getWiFi() const { return wifi; }
+    WebServerManager* getWebServer() const { return webServer; }
+    LEDManager* getLEDManager() const { return ledManager; }
+
     // State management
     SystemState getState() const { return currentState; }
     void setState(SystemState state);
