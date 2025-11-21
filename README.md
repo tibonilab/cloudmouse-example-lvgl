@@ -78,7 +78,7 @@ All dependencies are automatically managed via `platformio.ini` - no manual inst
 
 #### Prerequisites
 - Arduino IDE 2.x or newer
-- ESP32 board support installed (see [Getting Started Guide](https://docs.cloudmouse.co/getting-started))
+- ESP32 board support installed (see [Getting Started Guide](https://cloudmouse.co/docs/getting-started))
 - CloudMouse device
 
 #### Installation
@@ -299,7 +299,8 @@ EventBus::instance().sendToMain(event);
 
 1. **Examples** - [cloudmouse.co/docs/example-code](https://cloudmouse.co/docs/example-code)
 2. **Documentation** - [cloudmouse.co/docs](https://cloudmouse.co/docs)
-3. **Community** - [Discord](https://discord.gg/cloudmouse)
+2. **SDK Reference** - [cloudmouse.co/sdk](https://cloudmouse.co/sdk)
+3. **Community** - [Discord](https://discord.gg/n4Mh6jxH34)
 4. **Build!** - Fork and create something awesome! 🚀
 
 ## 🐛 Troubleshooting
@@ -334,7 +335,7 @@ EventBus::instance().sendToMain(event);
 - Install all required libraries
 - Check board configuration
 
-For more help: [docs.cloudmouse.co/troubleshooting](https://docs.cloudmouse.co/troubleshooting)
+For more help: [cloudmouse.co/docs/troubleshooting](https://cloudmouse.co/docs/troubleshooting)
 
 ## 📄 License
 
@@ -342,8 +343,8 @@ MIT License - Free to use, modify, and distribute. See [LICENSE](LICENSE) for de
 
 ## 🌟 Community
 
-- **Discord**: [discord.gg/cloudmouse](https://discord.gg/cloudmouse)
-- **Forum**: [forum.cloudmouse.co](https://forum.cloudmouse.co)
+- **Discord**: [discord.gg/cloudmouse](https://discord.gg/n4Mh6jxH34)
+<!-- - **Forum**: [forum.cloudmouse.co](https://forum.cloudmouse.co) -->
 - **GitHub**: [github.com/cloudmouse-co](https://github.com/cloudmouse-co)
 - **Website**: [cloudmouse.co](https://cloudmouse.co)
 - **Docs**: [cloudmouse.co/docs](https://cloudmouse.co/docs)
