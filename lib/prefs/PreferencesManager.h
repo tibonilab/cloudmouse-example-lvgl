@@ -56,6 +56,9 @@ namespace CloudMouse::Prefs
         // Configuration
         const char *space = "my-app"; // NVS namespace
 
+        int batchDepth = 0;                     // Nested locking counter
+        SemaphoreHandle_t nvsMutex = NULL;      // NVS mutex
+
         // Default values for device settings
         const int DEFAULT_BRIGHTNESS = 80;
         const String DEFAULT_LED_COLOR = "azure";

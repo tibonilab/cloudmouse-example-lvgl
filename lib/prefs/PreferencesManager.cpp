@@ -15,17 +15,41 @@ namespace CloudMouse::Prefs
 
     void PreferencesManager::init()
     {
+        // Create mutex for thread-safe access
+        if (nvsMutex == NULL)
+        {
+            nvsMutex = xSemaphoreCreateMutex();
+            if (nvsMutex == NULL)
+            {
+                Serial.println("❌ FATAL: Failed to create NVS mutex!");
+            }
+            else
+            {
+                Serial.println("✅ NVS mutex created");
+            }
+        }
+
         initDeviceSettings();
     }
 
     void PreferencesManager::begin(bool readOnly)
     {
+        if (nvsMutex != NULL)
+        {
+            xSemaphoreTake(nvsMutex, portMAX_DELAY);
+        }
+
         preferences.begin(space, readOnly);
     }
 
     void PreferencesManager::end()
     {
         preferences.end();
+
+        if (nvsMutex != NULL)
+        {
+            xSemaphoreGive(nvsMutex);
+        }
     }
 
     // ============================================================================
@@ -87,26 +111,82 @@ namespace CloudMouse::Prefs
 
     bool PreferencesManager::beginBatch(bool readOnly)
     {
-        if (batchOpen)
+
+        // Lock mutex FIRST
+        if (nvsMutex != NULL)
         {
-            Serial.println("⚠️ Batch already open, closing first");
-            endBatch();
+            xSemaphoreTake(nvsMutex, portMAX_DELAY);
         }
 
-        batchOpen = preferences.begin(space, readOnly);
+        // Check if already open (nested call)
+        if (batchOpen)
+        {
+            Serial.println("⚠️ Batch already open (nested call), keeping it open");
+            batchDepth++;
+            return true;
+        }
 
-        return batchOpen;
+        // Try up to 3 times with small delay
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            batchOpen = preferences.begin(space, readOnly);
+
+            if (batchOpen)
+            {
+                batchDepth = 1;
+                if (attempt > 0)
+                {
+                    Serial.printf("✅ Batch opened on attempt %d\n", attempt + 1);
+                }
+                return true;
+            }
+
+            Serial.printf("⚠️ Batch open failed (attempt %d/3), retrying...\n", attempt + 1);
+            delay(10);
+        }
+
+        Serial.printf("❌ Batch open FAILED after 3 attempts! (namespace=%s)\n", space);
+        
+        // Release mutex on failure
+        if (nvsMutex != NULL)
+        {
+            xSemaphoreGive(nvsMutex);
+        }
+        
+        return false;
     }
 
     void PreferencesManager::endBatch()
     {
         if (!batchOpen)
         {
+            // Not open, but still release mutex if taken
+            if (nvsMutex != NULL && batchDepth > 0)
+            {
+                xSemaphoreGive(nvsMutex);
+                batchDepth = 0;
+            }
             return;
         }
 
+        // Handle nested calls
+        batchDepth--;
+        if (batchDepth > 0)
+        {
+            Serial.printf("⚠️ Nested batch, depth now: %d\n", batchDepth);
+            return;
+        }
+
+        // Actually close
         preferences.end();
         batchOpen = false;
+        batchDepth = 0;
+
+        // Release mutex LAST
+        if (nvsMutex != NULL)
+        {
+            xSemaphoreGive(nvsMutex);
+        }
     }
 
     bool PreferencesManager::putString(const char *key, const String &value)
@@ -142,7 +222,7 @@ namespace CloudMouse::Prefs
         end();
 
         // Reinitialize namespace to ensure clean state
-        preferences.begin("my-app", false);
+        preferences.begin(space, false);
         preferences.clear();
         end();
     }
