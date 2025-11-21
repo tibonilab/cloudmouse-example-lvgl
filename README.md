@@ -344,10 +344,10 @@ MIT License - Free to use, modify, and distribute. See [LICENSE](LICENSE) for de
 ## 🌟 Community
 
 - **Discord**: [discord.gg/cloudmouse](https://discord.gg/n4Mh6jxH34)
-<!-- - **Forum**: [forum.cloudmouse.co](https://forum.cloudmouse.co) -->
 - **GitHub**: [github.com/cloudmouse-co](https://github.com/cloudmouse-co)
 - **Website**: [cloudmouse.co](https://cloudmouse.co)
 - **Docs**: [cloudmouse.co/docs](https://cloudmouse.co/docs)
+<!-- - **Forum**: [forum.cloudmouse.co](https://forum.cloudmouse.co) -->
 
 ## 💖 Credits
 
