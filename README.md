@@ -1,6 +1,6 @@
 # CloudMouse SDK
 
-**Event-driven dual-core firmware for CloudMouse hardware**
+**Event-driven dual-core firmware for [CloudMouse](https://cloudmouse.co) hardware**
 
 A complete, ready-to-use starting point for building CloudMouse applications. Fork this repo, customize it, and create your own interactive projects with display, encoder, LEDs, WiFi, and more.
 
