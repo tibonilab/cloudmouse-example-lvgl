@@ -191,7 +191,7 @@ This example follows the CloudMouse SDK architecture:
 - [LVGL Official Website](https://lvgl.io/)
 - [LVGL Documentation](https://docs.lvgl.io/)
 - [LVGL Examples](https://docs.lvgl.io/master/examples.html)
-- [CloudMouse SDK](https://github.com/tibonilab/cloudmouse-boilerplate)
+- [CloudMouse SDK](https://github.com/cloudmouse-co/cloudmouse-sdk)
 
 
 ## 📝 License
